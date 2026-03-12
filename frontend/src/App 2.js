@@ -4,28 +4,25 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import AdminDashboard from './pages/admin/AdminDashboard';
 
 const AUTH_ROUTES = ['/login', '/register'];
 
 function Layout() {
   const { pathname } = useLocation();
   const isAuth = AUTH_ROUTES.includes(pathname);
-  const isDashboard = pathname.startsWith('/dashboard');
-  const hideChrome = isAuth || isDashboard;
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!hideChrome && <Navbar />}
+      {!isAuth && <Navbar />}
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
+          {/* Role-based dashboards will be added here */}
         </Routes>
       </main>
-      {!hideChrome && <Footer />}
+      {!isAuth && <Footer />}
     </div>
   );
 }

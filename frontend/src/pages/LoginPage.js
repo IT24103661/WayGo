@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdFlight, MdEmail, MdLock, MdVisibility, MdVisibilityOff, MdArrowForward } from 'react-icons/md';
 import { FaShieldAlt, FaGlobeAmericas, FaStar } from 'react-icons/fa';
 
 const ROLE_REDIRECTS = {
-  Tourist: '/dashboard/tourist',
-  Driver: '/dashboard/driver',
+  Tourist:     '/dashboard/tourist',
+  Driver:      '/dashboard/driver',
   TourManager: '/dashboard/tour-manager',
-  FleetManager: '/dashboard/fleet-manager',
+  FleetManager:'/dashboard/fleet-manager',
   SystemAdmin: '/dashboard/admin',
+  Admin:       '/dashboard/admin',
 };
 
 /* ── ripple helper ── */
@@ -41,6 +42,15 @@ function RippleBtn({ onClick, children, className, disabled, type = 'button' }) 
 
 export default function LoginPage() {
   const navigate = useNavigate();
+
+  // If already logged in, redirect to the correct dashboard immediately
+  useEffect(() => {
+    const role = localStorage.getItem('waygo_role');
+    const token = localStorage.getItem('waygo_token');
+    if (role && token && ROLE_REDIRECTS[role]) {
+      navigate(ROLE_REDIRECTS[role], { replace: true });
+    }
+  }, [navigate]);
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
