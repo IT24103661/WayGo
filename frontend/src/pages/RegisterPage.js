@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdFlight, MdPerson, MdEmail, MdLock, MdPhone, MdVisibility, MdVisibilityOff, MdArrowForward } from 'react-icons/md';
 import { FaCheckCircle, FaShieldAlt, FaGlobeAmericas, FaStar } from 'react-icons/fa';
@@ -60,7 +60,6 @@ function Ripple({ btnRef, onClick, children, className, disabled, type = 'button
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const btnRef   = useRef(null);
 
   const [form, setForm] = useState({
     name: '',
