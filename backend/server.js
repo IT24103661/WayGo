@@ -9,18 +9,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- NEW: Import your routes here ---
+// Register all models FIRST before routes
+require('./models/User');
+require('./models/Tour');
+require('./models/Vehicle');
+require('./models/Booking');
+
+// Routes
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/users', authRoutes);
-// Now your registration URL will be: http://localhost:5000/api/users/register
 
-// Database Connection
+// Connect to DB — only start the server after a successful connection
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB Connected to WayGo!'))
-  .catch(err => console.log('Database Error: ', err));
+  .then(() => {
+    console.log('✅ MongoDB Connected!');
+    console.log(`   Database: ${mongoose.connection.name}`);
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port: ${PORT}`);
-});
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port: ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    process.exit(1);
+  });
+
+mongoose.connection.on('disconnected', () => console.warn('⚠️  MongoDB disconnected'));
+mongoose.connection.on('reconnected',  () => console.log('🔄 MongoDB reconnected'));
