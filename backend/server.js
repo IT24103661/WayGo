@@ -17,7 +17,9 @@ require('./models/Booking');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const tourManagerRoutes = require('./routes/tourManagerRoutes');
 app.use('/api/users', authRoutes);
+app.use('/api/tourmanager', tourManagerRoutes);
 
 // Connect to DB — only start the server after a successful connection
 mongoose.connect(process.env.MONGO_URI)

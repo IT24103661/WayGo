@@ -24,4 +24,29 @@ const protect = (req, res, next) => {
     }
 };
 
-module.exports = { protect };
+const authorizeRoles = (...allowedRoles) => (req, res, next) => {
+    if (!req.user?.role) {
+        return res.status(401).json({ message: 'Access denied. Missing role context.' });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ message: 'Forbidden. You do not have permission to access this resource.' });
+    }
+
+    return next();
+};
+
+const requireResourceOwnership = (resourceUserIdPath = 'userId') => (req, res, next) => {
+    const resourceUserId = req.params?.[resourceUserIdPath] || req.body?.[resourceUserIdPath] || req.query?.[resourceUserIdPath];
+    if (!resourceUserId) {
+        return res.status(400).json({ message: 'Resource owner reference is required.' });
+    }
+
+    if (String(resourceUserId) !== String(req.user.userId)) {
+        return res.status(403).json({ message: 'Forbidden. You can only access your own resources.' });
+    }
+
+    return next();
+};
+
+module.exports = { protect, authorizeRoles, requireResourceOwnership };
