@@ -1,6 +1,8 @@
 const Tour = require('../models/Tour');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const TourPackage = require('../models/TourPackage');
+const CustomQuote = require('../models/CustomQuote');
 
 // GET ALL TOURS FOR THIS MANAGER
 exports.getTours = async (req, res) => {
@@ -182,5 +184,146 @@ exports.getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET TOUR PACKAGES
+exports.getTourPackages = async (req, res) => {
+  try {
+    const packages = await TourPackage.find().sort({ createdAt: -1 });
+    return res.json({
+      success: true,
+      count: packages.length,
+      data: packages
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET CUSTOM QUOTES
+exports.getCustomQuotes = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    const quotes = await CustomQuote.find(query)
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: quotes.length,
+      data: quotes
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// CREATE TOUR PACKAGE
+exports.createTourPackage = async (req, res) => {
+  try {
+    const { title, description, flatPrice, durationDays, itineraryStops, vehicleType } = req.body;
+
+    if (!title || !description || !flatPrice || !durationDays || !vehicleType) {
+      return res.status(400).json({ message: 'Title, description, flat price, duration, and vehicle type are required.' });
+    }
+
+    const tourPackage = await TourPackage.create({
+      title,
+      description,
+      flatPrice,
+      durationDays,
+      itineraryStops: itineraryStops || [],
+      vehicleType
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tour package created successfully.',
+      data: tourPackage
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// REVIEW CUSTOM QUOTE
+exports.reviewCustomQuote = async (req, res) => {
+  try {
+    const { quoteId } = req.params;
+    const { quotedPrice, status } = req.body;
+
+    const quote = await CustomQuote.findById(quoteId);
+    if (!quote) {
+      return res.status(404).json({ message: 'Custom quote not found.' });
+    }
+
+    if (quotedPrice !== undefined) {
+      quote.quotedPrice = quotedPrice;
+    }
+
+    if (status) {
+      quote.status = status;
+    } else if (quotedPrice !== undefined) {
+      quote.status = 'Quoted';
+    }
+
+    await quote.save();
+
+    return res.json({
+      success: true,
+      message: 'Custom quote updated successfully.',
+      data: quote
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ASSIGN CERTIFIED DRIVER TO TOUR BOOKING
+exports.assignTourDriver = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { driverId } = req.body;
+
+    if (!driverId) {
+      return res.status(400).json({ message: 'driverId is required.' });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found.' });
+    }
+
+    if (booking.bookingType !== 'Tour') {
+      return res.status(400).json({ message: 'Only tour bookings can have a tour manager assignment.' });
+    }
+
+    const driver = await User.findOne({
+      _id: driverId,
+      role: 'Driver',
+      isTourCertified: true
+    });
+
+    if (!driver) {
+      return res.status(404).json({ message: 'Certified driver not found.' });
+    }
+
+    booking.assignedDriver = driver._id;
+    booking.status = 'Accepted';
+    await booking.save();
+
+    return res.json({
+      success: true,
+      message: 'Driver assigned to tour booking.',
+      data: booking
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

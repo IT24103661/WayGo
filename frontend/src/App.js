@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import TouristDashboard from './pages/tourist/TouristDashboard';
 import DriverDashboard from './pages/driver/DriverDashboard';
+import TourManagerDashboard from './pages/tourmanager/TourManagerDashboard';
 
 const AUTH_ROUTES = ['/login', '/register'];
 
@@ -26,6 +27,7 @@ function Layout() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard/tourist/*" element={<TouristDashboard />} />
           <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
+          <Route path="/dashboard/tourmanager/*" element={<TourManagerDashboard />} />
           <Route path="/dashboard/driver/*" element={<DriverDashboard />} />
         </Routes>
       </main>

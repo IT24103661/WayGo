@@ -14,6 +14,8 @@ require('./models/User');
 require('./models/Tour');
 require('./models/Vehicle');
 require('./models/Booking');
+require('./models/TourPackage');
+require('./models/CustomQuote');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');

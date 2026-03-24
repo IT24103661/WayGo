@@ -6,8 +6,8 @@ import { FaShieldAlt, FaGlobeAmericas, FaStar } from 'react-icons/fa';
 const ROLE_REDIRECTS = {
   Tourist:     '/dashboard/tourist',
   Driver:      '/dashboard/driver',
-  TourManager: '/dashboard/tour-manager',
-  FleetManager:'/dashboard/fleet-manager',
+  TourManager: '/dashboard/tourmanager',
+  FleetManager:'/dashboard/fleetmanager',
   SystemAdmin: '/dashboard/admin',
   Admin:       '/dashboard/admin',
 };
