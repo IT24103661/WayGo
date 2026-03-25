@@ -9,6 +9,7 @@ const vehicleSchema = new mongoose.Schema({
         trim: true
     },
     make:  { type: String, required: true },
+    brand: { type: String, trim: true },
     model: { type: String, required: true },
     year:  { type: Number, required: true },
     type: {
@@ -16,9 +17,14 @@ const vehicleSchema = new mongoose.Schema({
         enum: ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'],
         required: true
     },
+    category: {
+        type: String,
+        enum: ['Economy', 'Luxury', 'Van', 'SUV'],
+        default: 'Economy'
+    },
     capacity: {
         type: Number,
-        required: true
+        default: 4
     },
     color: { type: String },
     assignedDriver: {
@@ -33,8 +39,18 @@ const vehicleSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Available', 'On Trip', 'Under Maintenance', 'Retired'],
+        enum: ['Active', 'Under Maintenance', 'Out of Service', 'Available', 'On Trip', 'Retired'],
         default: 'Available'
+    },
+    compliance: {
+        licenseExpiry: { type: Date, default: null },
+        insuranceExpiry: { type: Date, default: null },
+        emissionTestExpiry: { type: Date, default: null }
+    },
+    mileage: {
+        current: { type: Number, default: 0 },
+        lastService: { type: Number, default: 0 },
+        serviceInterval: { type: Number, default: 5000 }
     },
     lastServiceDate: { type: Date, default: null },
     insuranceExpiry: { type: Date, default: null }

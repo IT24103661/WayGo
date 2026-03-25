@@ -8,6 +8,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import TouristDashboard from './pages/tourist/TouristDashboard';
 import DriverDashboard from './pages/driver/DriverDashboard';
 import TourManagerDashboard from './pages/tourmanager/TourManagerDashboard';
+import FleetManagerDashboard from './pages/fleetmanager/FleetManagerDashboard';
 
 const AUTH_ROUTES = ['/login', '/register'];
 
@@ -29,6 +30,7 @@ function Layout() {
           <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
           <Route path="/dashboard/tourmanager/*" element={<TourManagerDashboard />} />
           <Route path="/dashboard/driver/*" element={<DriverDashboard />} />
+          <Route path="/dashboard/fleetmanager/*" element={<FleetManagerDashboard />} />
         </Routes>
       </main>
       {!hideChrome && <Footer />}
