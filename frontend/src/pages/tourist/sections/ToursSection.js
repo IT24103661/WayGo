@@ -4,7 +4,7 @@ import { MdSearch, MdArrowForward, MdStar, MdLocationOn, MdAccessTime, MdPeople,
 import imgSigiriya from '../../../assets/images/Sigiriya.jpg';
 import imgYala from '../../../assets/images/Yala.jpg';
 import imgElla from '../../../assets/images/Ella.jpg';
-import imgGalle from '../../../assets/images/Galle Fort 1.jpg';
+import imgGalle from '../../../assets/images/GalleFort.jpg';
 
 const TOURS = [
   {

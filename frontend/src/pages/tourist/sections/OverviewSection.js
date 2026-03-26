@@ -43,7 +43,7 @@ export default function OverviewSection() {
             </div>
             
             <div className="flex flex-wrap items-center gap-4">
-              <button className="flex items-center gap-2 bg-zinc-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-bold transition-all duration-300 shadow-[0_8px_20px_rgba(15,23,42,0.2)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.3)] hover:-transtone-y-1">
+              <button className="flex items-center gap-2 bg-zinc-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-bold transition-all duration-300 shadow-[0_8px_20px_rgba(15,23,42,0.2)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.3)] hover:-translate-y-1">
                 Explore Top Tours
                 <MdArrowForward className="text-xl" />
               </button>
