@@ -24,26 +24,32 @@ export default function TouristDashboard() {
   const meta = PAGE_META[segment] || PAGE_META.overview;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <TouristSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="relative flex h-screen overflow-hidden bg-[#f4f7f4]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
+      {/* Background Blobs */}
+      <div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl" />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TouristTopBar
-          title={meta.title}
-          subtitle={meta.subtitle}
-          onMenuClick={() => setSidebarOpen(true)}
-        />
-        <main className="flex-1 overflow-y-auto p-6">
-          <Routes>
-            <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={<OverviewSection />} />
-            <Route path="tours" element={<ToursSection />} />
-            <Route path="bookings" element={<BookingsSection />} />
-            <Route path="reviews" element={<ReviewsSection />} />
-            <Route path="notifications" element={<NotificationsSection />} />
-            <Route path="support" element={<SupportSection />} />
-          </Routes>
-        </main>
+      <div className="relative z-10 flex h-full w-full">
+        <TouristSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <TouristTopBar
+            title={meta.title}
+            subtitle={meta.subtitle}
+            onMenuClick={() => setSidebarOpen(true)}
+          />
+          <main className="flex-1 overflow-y-auto px-6 pb-10">
+            <Routes>
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<OverviewSection />} />
+              <Route path="tours" element={<ToursSection />} />
+              <Route path="bookings" element={<BookingsSection />} />
+              <Route path="reviews" element={<ReviewsSection />} />
+              <Route path="notifications" element={<NotificationsSection />} />
+              <Route path="support" element={<SupportSection />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </div>
   );
