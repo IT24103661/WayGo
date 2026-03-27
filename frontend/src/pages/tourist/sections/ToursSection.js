@@ -4,7 +4,7 @@ import { MdSearch, MdArrowForward, MdStar, MdLocationOn, MdAccessTime, MdPeople,
 import imgSigiriya from '../../../assets/images/Sigiriya.jpg';
 import imgYala from '../../../assets/images/Yala.jpg';
 import imgElla from '../../../assets/images/Ella.jpg';
-import imgGalle from '../../../assets/images/GalleFort.jpg';
+import imgGalleFort from '../../../assets/images/Galle Fort.jpg';
 
 const TOURS = [
   {
@@ -51,7 +51,7 @@ const TOURS = [
     price: 'LKR 5,000',
     rating: 4.6,
     reviews: 156,
-    image: imgGalle,
+    image: imgGalleFort,
     available: 20,
     gradient: 'from-emerald-500/20 to-teal-500/20',
   },
