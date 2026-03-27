@@ -1,29 +1,73 @@
 // API endpoints for Tourist-Driver-TourManager interactions
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001/api';
 
 export const touristAPI = {
-  // Bookings (connects Tourist with Driver/TourManager)
-  getBookings: () => fetch(`${API_BASE}/bookings/tourist`, {
+  // === Profile Management (CRUD) ===
+  getProfile: () => fetch(`${API_BASE}/tourist/profile`, {
     headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
   }).then(r => r.json()),
 
-  createBooking: (bookingData) => fetch(`${API_BASE}/bookings`, {
+  updateProfile: (profileData) => fetch(`${API_BASE}/tourist/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
+    },
+    body: JSON.stringify(profileData)
+  }).then(r => r.json()),
+
+  deleteProfile: () => fetch(`${API_BASE}/tourist/profile`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
+  }).then(r => r.json()),
+
+  // === Bookings Management (CRUD) ===
+  getBookings: () => fetch(`${API_BASE}/tourist/bookings`, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
+  }).then(r => r.json()),
+
+  createBooking: (bookingData) => fetch(`${API_BASE}/tourist/bookings`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
     },
     body: JSON.stringify(bookingData)
-  }).then(r => r.json()),
+  }).then(async r => {
+    if (!r.ok) {
+        let errData = {};
+        try { errData = await r.json(); } catch(e) {}
+        throw new Error(errData.message || errData.error || 'Request failed with status ' + r.status);
+    }
+    return r.json();
+  }),
 
-  cancelBooking: (bookingId) => fetch(`${API_BASE}/bookings/${bookingId}`, {
-    method: 'DELETE',
+  cancelBooking: (bookingId) => fetch(`${API_BASE}/tourist/bookings/${bookingId}/cancel`, {
+    method: 'PUT',
     headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
   }).then(r => r.json()),
 
-  // Tours (from TourManagers)
-  getTours: (filters = {}) => fetch(`${API_BASE}/tours?${new URLSearchParams(filters)}`).then(r => r.json()),
-  getTourDetails: (tourId) => fetch(`${API_BASE}/tours/${tourId}`).then(r => r.json()),
+  updateBooking: (bookingId, updatedData) => fetch(`${API_BASE}/tourist/bookings/${bookingId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
+    },
+    body: JSON.stringify(updatedData)
+  }).then(async r => {
+    if (!r.ok) {
+        let errData = {};
+        try { errData = await r.json(); } catch(e) {}
+        throw new Error(errData.message || errData.error || 'Request failed with status ' + r.status);
+    }
+    return r.json();
+  }),
+
+
+  // === Tours (Available to Tourist) ===
+  getTours: () => fetch(`${API_BASE}/tourist/tours`, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
+  }).then(r => r.json()),
 
   // Drivers (for ride bookings & contact)
   getAvailableDrivers: (location, date) => fetch(`${API_BASE}/drivers/available?location=${location}&date=${date}`)

@@ -1,4 +1,6 @@
 import { MdSearch, MdArrowForward, MdStar, MdLocationOn, MdAccessTime, MdPeople, MdFilterList } from 'react-icons/md';
+import { useState } from 'react';
+import { useTouristBookings } from '../../../hooks/useTouristAPI';
 
 // Import local images
 import imgSigiriya from '../../../assets/images/Sigiriya.jpg';
@@ -58,6 +60,27 @@ const TOURS = [
 ];
 
 export default function ToursSection() {
+  const { createBooking } = useTouristBookings();
+  const [bookingStatus, setBookingStatus] = useState({}); // Track booking status per tour id
+
+  const handleBookTour = async (tour) => {
+    try {
+      setBookingStatus(prev => ({ ...prev, [tour.id]: 'loading' }));
+      // We will send some dummy dates/members since we don't have a modal right now
+      await createBooking({
+        tourId: tour.id, // Usually backend expects a Mongo _id
+        date: new Date(Date.now() + 86400000 * 7), // 7 days from now
+        members: 2
+      });
+      setBookingStatus(prev => ({ ...prev, [tour.id]: 'success' }));
+      alert(`Successfully booked: ${tour.title}! Redirecting/updating status...`);
+    } catch (err) {
+      setBookingStatus(prev => ({ ...prev, [tour.id]: 'error' }));
+      console.error(err);
+      alert(`Failed to book. ${err.message || err}`);
+    }
+  };
+
   return (
     <div className="space-y-8 font-sans animate-fade-in-up pb-10">
       
@@ -156,8 +179,12 @@ export default function ToursSection() {
                   </p>
                 </div>
                 
-                <button className="flex items-center gap-2 bg-stone-50 hover:bg-zinc-900 text-stone-700 hover:text-white px-5 py-3 rounded-xl font-bold transition-all duration-300 border border-stone-200 hover:border-zinc-900">
-                  <span>Book</span>
+                <button 
+                  onClick={() => handleBookTour(tour)}
+                  disabled={bookingStatus[tour.id] === 'loading'}
+                  className="flex items-center gap-2 bg-stone-50 hover:bg-zinc-900 text-stone-700 hover:text-white px-5 py-3 rounded-xl font-bold transition-all duration-300 border border-stone-200 hover:border-zinc-900 disabled:opacity-50"
+                >
+                  <span>{bookingStatus[tour.id] === 'loading' ? 'Booking...' : (bookingStatus[tour.id] === 'success' ? 'Booked' : 'Book')}</span>
                   <MdArrowForward className="text-lg" />
                 </button>
               </div>

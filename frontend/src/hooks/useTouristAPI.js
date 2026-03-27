@@ -49,7 +49,22 @@ export const useTouristBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+    };
+
+    const updateBooking = async (bookingId, updatedData) => {
+      try {
+        setLoading(true);
+        const updatedBooking = await touristAPI.updateBooking(bookingId, updatedData);
+        setBookings(bookings.map(b => b._id === bookingId ? updatedBooking : b));
+        setError(null);
+        return updatedBooking;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     fetchBookings();

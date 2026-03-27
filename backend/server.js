@@ -22,10 +22,13 @@ const authRoutes = require('./routes/authRoutes');
 const tourManagerRoutes = require('./routes/tourManagerRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const fleetManagerRoutes = require('./routes/fleetManagerRoutes');
+const touristRoutes = require('./routes/touristRoutes');
+
 app.use('/api/users', authRoutes);
 app.use('/api/tourmanager', tourManagerRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/fleetmanager', fleetManagerRoutes);
+app.use('/api/tourist', touristRoutes);
 
 // Connect to DB — only start the server after a successful connection
 mongoose.connect(process.env.MONGO_URI)

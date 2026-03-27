@@ -1,6 +1,9 @@
-import { MdCheckCircle, MdHourglassEmpty, MdCancel, MdMoreVert, MdDirectionsCar, MdTour, MdCalendarToday } from 'react-icons/md';
+import { useState, useEffect, useRef } from 'react';
+import { MdCheckCircle, MdHourglassEmpty, MdCancel, MdMoreVert, MdDirectionsCar, MdTour, MdCalendarToday, MdEdit, MdSupportAgent } from 'react-icons/md';
+import { useTouristBookings } from '../../../hooks/useTouristAPI';
 
-const BOOKINGS = [
+// Mock fallback just in case
+const MOCK_BOOKINGS = [
   { id: '#BK-0041', type: 'Tour', destination: 'Sigiriya Rock', driver: 'Ruwan D.', date: 'Mar 15, 2026', amount: 'LKR 12,500', status: 'Upcoming' },
   { id: '#BK-0042', type: 'Taxi', destination: 'CMB → Kandy', driver: 'Kamal P.', date: 'Mar 12, 2026', amount: 'LKR 4,200', status: 'Completed' },
   { id: '#BK-0043', type: 'Tour', destination: 'Yala Safari', driver: 'Nilantha S.', date: 'Mar 20, 2026', amount: 'LKR 28,000', status: 'Pending' },
@@ -23,6 +26,24 @@ const STATUS_ICON = {
 };
 
 export default function BookingsSection() {
+  const { bookings, loading, error, cancelBooking } = useTouristBookings();
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdownId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Prefer actual API bookings, fallback to MOCK_BOOKINGS
+  // In a real app we structure actual API returns differently, mapping may be needed.
+  const displayBookings = bookings && bookings.length > 0 ? bookings : MOCK_BOOKINGS;
+
   return (
     <div className="space-y-6 font-sans animate-fade-in-up pb-10">
       
@@ -76,15 +97,26 @@ export default function BookingsSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {BOOKINGS.map((booking) => {
-                const StatusIcon = STATUS_ICON[booking.status];
-                const isTour = booking.type === 'Tour';
+              {loading && <tr><td colSpan="7" className="text-center py-4">Loading bookings...</td></tr>}
+              {error && <tr><td colSpan="7" className="text-center py-4 text-red-500">{error}</td></tr>}
+              {!loading && !error && displayBookings.map((booking) => {
+                const statusStr = booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Pending';
+                const StatusIcon = STATUS_ICON[statusStr] || STATUS_ICON['Pending'];
+                const isTour = booking.type === 'Tour' || booking.tour;
                 
+                const dispId = booking._id ? `#BK-${booking._id.substring(booking._id.length - 4)}` : booking.id;
+                const dest = booking.tour?.title || booking.destination || 'N/A';
+                const typeLabel = isTour ? 'Tour' : 'Taxi';
+                const driverName = booking.driver?.name || booking.driver || 'Unassigned';
+                const dateRaw = booking.date || new Date().toISOString();
+                const formattedDate = booking.id ? booking.date : new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const amountDisp = booking.amount || 'LKR -';
+
                 return (
-                  <tr key={booking.id} className="hover:bg-stone-50/80 transition-colors group">
+                  <tr key={booking._id || booking.id} className="hover:bg-stone-50/80 transition-colors group">
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="font-mono text-xs font-bold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-md">
-                        {booking.id}
+                        {dispId}
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
@@ -93,17 +125,17 @@ export default function BookingsSection() {
                           {isTour ? <MdTour className="text-lg" /> : <MdDirectionsCar className="text-lg" />}
                         </div>
                         <div>
-                          <p className="font-bold text-stone-800 group-hover:text-emerald-600 transition-colors">{booking.destination}</p>
-                          <p className="text-xs font-medium text-stone-500">{booking.type}</p>
+                          <p className="font-bold text-stone-800 group-hover:text-emerald-600 transition-colors">{dest}</p>
+                          <p className="text-xs font-medium text-stone-500">{typeLabel}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        {booking.driver !== 'Unassigned' ? (
+                        {driverName !== 'Unassigned' ? (
                           <>
-                            <img src={`https://ui-avatars.com/api/?name=${booking.driver}&background=random`} alt="Driver" className="w-6 h-6 rounded-full" />
-                            <span className="font-medium text-stone-700">{booking.driver}</span>
+                            <img src={`https://ui-avatars.com/api/?name=${driverName}&background=random`} alt="Driver" className="w-6 h-6 rounded-full" />
+                            <span className="font-medium text-stone-700">{driverName}</span>
                           </>
                         ) : (
                           <span className="text-sm font-medium text-stone-400 italic">Unassigned</span>
@@ -111,23 +143,74 @@ export default function BookingsSection() {
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap font-medium text-stone-500">
-                      {booking.date}
+                      {formattedDate}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="font-black text-zinc-900 border-b-2 border-transparent group-hover:border-emerald-200 pb-0.5 transition-colors">
-                        {booking.amount}
+                        {amountDisp}
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <span className={`text-xs px-3.5 py-1.5 rounded-lg font-bold tracking-wide flex items-center gap-1.5 w-fit ${STATUS_BADGE[booking.status]}`}>
+                      <span className={`text-xs px-3.5 py-1.5 rounded-lg font-bold tracking-wide flex items-center gap-1.5 w-fit ${STATUS_BADGE[statusStr] || STATUS_BADGE['Pending']}`}>
                         <StatusIcon className="text-sm" />
-                        {booking.status}
+                        {statusStr}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-center whitespace-nowrap">
-                      <button className="text-stone-400 hover:text-zinc-900 p-2 rounded-xl hover:bg-stone-100 transition-colors">
-                        <MdMoreVert className="text-xl" />
-                      </button>
+                    <td className="px-6 py-5 whitespace-nowrap text-right">
+                      <div className="flex justify-end items-center relative">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentId = booking._id || booking.id;
+                            if (openDropdownId === currentId) {
+                              setOpenDropdownId(null);
+                            } else {
+                              setOpenDropdownId(currentId);
+                            }
+                          }}
+                          className="text-stone-400 hover:text-zinc-900 p-2 rounded-xl hover:bg-stone-100 transition-colors"
+                        >
+                          <MdMoreVert className="text-xl" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {openDropdownId === (booking._id || booking.id) && (
+                          <div 
+                            ref={dropdownRef}
+                            className="absolute right-0 top-full mt-1 w-48 bg-white border border-stone-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] py-2 z-50 flex flex-col text-left overflow-hidden ring-1 ring-black/5 animate-fade-in-up"
+                            style={{ animationDuration: '0.2s' }}
+                          >
+                            <button 
+                              onClick={() => { alert('Modify Booking logic coming soon!'); setOpenDropdownId(null); }}
+                              className="w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-colors"
+                            >
+                              <MdEdit className="text-lg" /> Modify Booking
+                            </button>
+                            
+                            <button 
+                              onClick={() => { alert('Contact support logic mapping...'); setOpenDropdownId(null); }}
+                              className="w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                            >
+                              <MdSupportAgent className="text-lg" /> Contact Support
+                            </button>
+
+                            {(statusStr !== 'Cancelled' && statusStr !== 'Completed' && booking._id) && (
+                              <>
+                                <div className="h-px bg-stone-100 my-1 w-full relative left-0"></div>
+                                <button 
+                                  onClick={() => {
+                                    cancelBooking(booking._id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+                                >
+                                  <MdCancel className="text-lg" /> Cancel Booking
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

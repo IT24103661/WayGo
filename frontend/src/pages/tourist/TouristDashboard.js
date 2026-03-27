@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import TouristSidebar from './TouristSidebar';
 import TouristTopBar from './TouristTopBar';
 import OverviewSection from './sections/OverviewSection';
+import ProfileSection from './sections/ProfileSection';
 import ToursSection from './sections/ToursSection';
 import BookingsSection from './sections/BookingsSection';
 import ReviewsSection from './sections/ReviewsSection';
@@ -42,6 +43,7 @@ export default function TouristDashboard() {
             <Routes>
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<OverviewSection />} />
+              <Route path="profile" element={<ProfileSection />} />
               <Route path="tours" element={<ToursSection />} />
               <Route path="bookings" element={<BookingsSection />} />
               <Route path="reviews" element={<ReviewsSection />} />

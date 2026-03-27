@@ -36,6 +36,16 @@ export default function TouristTopBar({ title, subtitle, onMenuClick }) {
             <MdNotificationsNone className="text-xl" />
             <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]"></span>
           </button>
+          
+          {/* Quick Logout Fix */}
+          <button 
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = '/login';
+            }}
+            className="text-xs font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg border border-rose-200 transition-colors">
+            Logout
+          </button>
         </div>
       </div>
     </header>

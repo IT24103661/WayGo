@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import md5 from 'md5';
+import { touristAPI } from '../../services/touristAPI';
 import {
+  MdPerson,
   MdDashboard,
   MdMap,
   MdPermContactCalendar,
@@ -13,6 +16,7 @@ import {
 
 const NAV_ITEMS = [
   { to: '/dashboard/tourist/overview', label: 'Overview', icon: MdDashboard },
+  { to: '/dashboard/tourist/profile', label: 'My Profile', icon: MdPerson },
   { to: '/dashboard/tourist/tours', label: 'Browse Tours', icon: MdMap },
   { to: '/dashboard/tourist/bookings', label: 'My Bookings', icon: MdPermContactCalendar },
   { to: '/dashboard/tourist/reviews', label: 'Reviews', icon: MdStar },
@@ -23,19 +27,30 @@ const NAV_ITEMS = [
 export default function TouristSidebar({ open, onClose }) {
   const navigate = useNavigate();
   const [touristName, setTouristName] = useState('Tourist');
+  const [photoUrl, setPhotoUrl] = useState(null);
 
   useEffect(() => {
+    // 1. Try to get basic name from token payload initially for speed
     try {
       const token = localStorage.getItem('waygo_token');
       if (token) {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const payload = JSON.parse(window.atob(base64));
-        setTouristName(payload.name || 'Tourist');
+        if (payload.name) setTouristName(payload.name);
       }
     } catch {
-      // ignore errors
+      // ignore
     }
+
+    // 2. Fetch fresh profile for latest name and email to hash photo
+    touristAPI.getProfile().then(profile => {
+      setTouristName(profile.name || 'Tourist');
+      if (profile.email) {
+        const hash = md5(profile.email.trim().toLowerCase());
+        setPhotoUrl(`https://www.gravatar.com/avatar/${hash}?d=identicon&s=150`);
+      }
+    }).catch(() => {});
   }, []);
 
   function handleLogout() {
@@ -113,9 +128,13 @@ export default function TouristSidebar({ open, onClose }) {
         {/* User Profile & Logout Section */}
         <div className="p-4 border-t border-emerald-900/50 bg-emerald-900/20">
           <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-emerald-900/40 border border-emerald-800/60 mb-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-amber-200 flex items-center justify-center text-[#06221f] font-bold text-sm flex-shrink-0">
-              {touristName.charAt(0).toUpperCase()}
-            </div>
+            {photoUrl ? (
+              <img src={photoUrl} alt={touristName} className="w-10 h-10 rounded-full border-2 border-emerald-500/30 shadow-md object-cover flex-shrink-0 bg-white" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-amber-200 flex items-center justify-center text-[#06221f] font-bold text-sm flex-shrink-0">
+                {touristName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="text-emerald-50 text-sm font-semibold truncate">{touristName}</p>
               <p className="text-emerald-200/60 text-xs truncate">Premium Member</p>
