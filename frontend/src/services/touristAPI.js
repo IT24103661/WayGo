@@ -84,18 +84,41 @@ export const touristAPI = {
   }).then(r => r.json()),
 
   // Reviews (feedback to Drivers & TourManagers)
-  submitReview: (bookingId, rating, comment) => fetch(`${API_BASE}/reviews`, {
+  getReviews: () => fetch(`${API_BASE}/tourist/reviews`, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
+  }).then(r => r.json()),
+
+  createReview: (reviewData) => fetch(`${API_BASE}/tourist/reviews`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
     },
-    body: JSON.stringify({ bookingId, rating, comment })
-  }).then(r => r.json()),
+    body: JSON.stringify(reviewData)
+  }).then(async r => {
+    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to create review'); }
+    return r.json();
+  }),
 
-  getReviews: () => fetch(`${API_BASE}/reviews/tourist`, {
+  updateReview: (id, reviewData) => fetch(`${API_BASE}/tourist/reviews/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
+    },
+    body: JSON.stringify(reviewData)
+  }).then(async r => {
+    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to update review'); }
+    return r.json();
+  }),
+
+  deleteReview: (id) => fetch(`${API_BASE}/tourist/reviews/${id}`, {
+    method: 'DELETE',
     headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  }).then(async r => {
+    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to delete review'); }
+    return r.json();
+  }),
 
   // Notifications
   getNotifications: () => fetch(`${API_BASE}/notifications`, {

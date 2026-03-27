@@ -8,7 +8,12 @@ const {
   createBooking,
   getMyBookings,
   cancelBooking,
-  updateBooking
+  updateBooking,
+  deleteBooking,
+  getReviews,
+  createReview,
+  updateReview,
+  deleteReview
 } = require('../controllers/touristController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -33,9 +38,20 @@ router.route('/bookings')
   .post(createBooking);
 
 router.route('/bookings/:id')
-  .put(updateBooking);
+  .put(updateBooking)
+  .delete(deleteBooking);
 
 router.route('/bookings/:id/cancel')
   .put(cancelBooking);
 
+// 3. Reviews Routes
+router.route('/reviews')
+  .get(getReviews)
+  .post(createReview);
+
+router.route('/reviews/:id')
+  .put(updateReview)
+  .delete(deleteReview);
+
 module.exports = router;
+

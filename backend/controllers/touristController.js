@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const TourPackage = require('../models/TourPackage');
+const Review = require('../models/Review');
 
 // ==========================================
 // 1. TOURIST PROFILE MANAGEMENT (CRUD)
@@ -156,5 +157,88 @@ exports.updateBooking = async (req, res) => {
     res.json(updatedBooking);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Delete a booking permanently
+// @route   DELETE /api/tourist/bookings/:id
+// @access  Private (Tourist only)
+exports.deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (booking.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized to delete this booking' });
+    }
+
+    await Booking.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+
+// ==========================================
+// REVIEWS MANAGEMENT (CRUD)
+// ==========================================
+
+exports.getReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ tourist: req.user.userId }).sort('-createdAt');
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.createReview = async (req, res) => {
+  try {
+    const { tourName, rating, text } = req.body;
+    const review = await Review.create({
+      tourist: req.user.userId,
+      tourName: tourName || 'General Tour',
+      rating,
+      text
+    });
+    res.status(201).json(review);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.updateReview = async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    if (review.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+    
+    if (req.body.rating) review.rating = req.body.rating;
+    if (req.body.text) review.text = req.body.text;
+    if (req.body.tourName) review.tourName = req.body.tourName;
+    
+    await review.save();
+    res.json(review);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.deleteReview = async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    if (review.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+    
+    await review.deleteOne();
+    res.json({ message: 'Review deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
