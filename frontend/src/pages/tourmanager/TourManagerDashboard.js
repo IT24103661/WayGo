@@ -6,6 +6,8 @@ import OverviewSection from './sections/OverviewSection';
 import CreatePackageSection from './sections/CreatePackageSection';
 import CustomQuotesSection from './sections/CustomQuotesSection';
 import ActiveToursMapSection from './sections/ActiveToursMapSection';
+import ManageToursSection from './sections/ManageToursSection';
+import TourManagerProfileSection from './sections/TourManagerProfileSection';
 
 export default function TourManagerDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,9 +16,11 @@ export default function TourManagerDashboard() {
   const segment = location.pathname.split('/').filter(Boolean).pop();
   const PAGE_META = {
     overview: { title: 'Tour Manager Console', subtitle: 'Curate premium, multi-day journeys' },
-    packages: { title: 'Create a Package', subtitle: 'Design signature experiences' },
+    packages: { title: 'Manage Packages', subtitle: 'Design signature experiences' },
+    tours: { title: 'Manage Custom Tours', subtitle: 'Detailed standalone itineraries' },
     quotes: { title: 'Pending Custom Quotes', subtitle: 'Review high-value requests' },
     map: { title: 'Active Tours Map', subtitle: 'Monitor premium tours in motion' },
+    profile: { title: 'Manager Profile', subtitle: 'Account management and settings' },
   };
   const meta = PAGE_META[segment] || PAGE_META.overview;
 
@@ -39,8 +43,10 @@ export default function TourManagerDashboard() {
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<OverviewSection />} />
               <Route path="packages" element={<CreatePackageSection />} />
+              <Route path="tours" element={<ManageToursSection />} />
               <Route path="quotes" element={<CustomQuotesSection />} />
               <Route path="map" element={<ActiveToursMapSection />} />
+              <Route path="profile" element={<TourManagerProfileSection />} />
             </Routes>
           </main>
         </div>

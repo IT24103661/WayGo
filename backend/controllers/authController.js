@@ -132,3 +132,62 @@ exports.getProfile = async (req, res) => {
         return res.status(500).json({ message: 'Server error fetching profile.' });
     }
 };
+
+// ─────────────────────────────────────
+// 4. UPDATE PROFILE (protected)
+// ─────────────────────────────────────
+exports.updateProfile = async (req, res) => {
+    try {
+        const { name, phone, email } = req.body;
+        
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // If email is provided and it's different from the current email
+        if (email && email.trim() !== user.email) {
+            const existingUser = await User.findOne({ email: email.trim() });
+            if (existingUser) {
+                return res.status(400).json({ message: 'Email is already in use.' });
+            }
+            user.email = email.trim();
+        }
+
+        if (name) user.name = name.trim();
+        if (phone) user.phone = phone.trim();
+
+        await user.save();
+        
+        const updatedUser = sanitize(user);
+        
+        return res.json({
+            success: true,
+            message: 'Profile updated successfully!',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('UpdateProfile error:', error);
+        return res.status(500).json({ message: 'Server error updating profile.' });
+    }
+};
+
+// ─────────────────────────────────────
+// 5. DELETE PROFILE (protected)
+// ─────────────────────────────────────
+exports.deleteProfile = async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        
+        return res.json({
+            success: true,
+            message: 'Account deleted successfully!'
+        });
+    } catch (error) {
+        console.error('DeleteProfile error:', error);
+        return res.status(500).json({ message: 'Server error deleting profile.' });
+    }
+};

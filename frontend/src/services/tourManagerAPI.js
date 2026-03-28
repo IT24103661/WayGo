@@ -6,6 +6,7 @@ const authHeaders = () => ({
 });
 
 export const tourManagerAPI = {
+  // --- PACKAGES ---
   getPackages: () => fetch(`${API_BASE}/tourmanager/packages`, {
     headers: authHeaders()
   }).then(r => r.json()),
@@ -16,6 +17,40 @@ export const tourManagerAPI = {
     body: JSON.stringify(payload)
   }).then(r => r.json()),
 
+  updatePackage: (packageId, payload) => fetch(`${API_BASE}/tourmanager/packages/${packageId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  deletePackage: (packageId) => fetch(`${API_BASE}/tourmanager/packages/${packageId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  // --- TOURS ---
+  getTours: () => fetch(`${API_BASE}/tourmanager/tours`, {
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  createTour: (payload) => fetch(`${API_BASE}/tourmanager/tours`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  updateTour: (tourId, payload) => fetch(`${API_BASE}/tourmanager/tours/${tourId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  deleteTour: (tourId) => fetch(`${API_BASE}/tourmanager/tours/${tourId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  // --- QUOTES ---
   getQuotes: (status) => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
     return fetch(`${API_BASE}/tourmanager/quotes${query}`, {
@@ -31,5 +66,16 @@ export const tourManagerAPI = {
 
   getStats: () => fetch(`${API_BASE}/tourmanager/stats`, {
     headers: authHeaders()
+  }).then(r => r.json()),
+
+  // --- BOOKINGS & DISPATCH ---
+  getBookings: () => fetch(`${API_BASE}/tourmanager/bookings`, {
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  assignDriver: (bookingId, payload) => fetch(`${API_BASE}/tourmanager/tours/${bookingId}/assign-driver`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
   }).then(r => r.json()),
 };

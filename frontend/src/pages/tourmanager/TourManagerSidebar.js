@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MdDashboard, MdAddBox, MdPendingActions, MdMap, MdLogout, MdClose } from 'react-icons/md';
+import { MdDashboard, MdAddBox, MdPendingActions, MdMap, MdLogout, MdClose, MdTour, MdPerson } from 'react-icons/md';
 
 const NAV_ITEMS = [
   { to: '/dashboard/tourmanager/overview', label: 'Overview', icon: MdDashboard },
-  { to: '/dashboard/tourmanager/packages', label: 'Create Package', icon: MdAddBox },
+  { to: '/dashboard/tourmanager/profile', label: 'Profile Settings', icon: MdPerson },
+  { to: '/dashboard/tourmanager/packages', label: 'Manage Packages', icon: MdAddBox },
+  { to: '/dashboard/tourmanager/tours', label: 'Manage Tours', icon: MdTour },
   { to: '/dashboard/tourmanager/quotes', label: 'Custom Quotes', icon: MdPendingActions },
   { to: '/dashboard/tourmanager/map', label: 'Active Tours Map', icon: MdMap },
 ];
@@ -14,6 +16,7 @@ export default function TourManagerSidebar({ open, onClose }) {
   const [managerName, setManagerName] = useState('Tour Manager');
 
   useEffect(() => {
+    // 1. Instantly load from token for fast render
     try {
       const token = localStorage.getItem('waygo_token');
       if (token) {
@@ -23,8 +26,38 @@ export default function TourManagerSidebar({ open, onClose }) {
         setManagerName(payload.name || 'Tour Manager');
       }
     } catch {
-      // ignore errors
+      // ignore
     }
+
+    // 2. Fetch fresh from backend to ensure real-time accuracy and overrides
+    const fetchFreshProfile = async () => {
+      try {
+        const token = localStorage.getItem('waygo_token');
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001/api'}/users/profile`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (response.ok && data.user?.name) {
+          setManagerName(data.user.name);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    
+    fetchFreshProfile();
+
+    // Listen for custom profile update events (thrown by the profile section on save)
+    const handleProfileUpdate = (e) => {
+      if (e.detail?.name) {
+        setManagerName(e.detail.name);
+      } else {
+        fetchFreshProfile(); // fallback re-fetch
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
   }, []);
 
   function handleLogout() {

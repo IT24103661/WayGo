@@ -111,15 +111,40 @@ exports.updateTour = async (req, res) => {
   }
 };
 
+// DELETE TOUR
+exports.deleteTour = async (req, res) => {
+  try {
+    const { tourId } = req.params;
+    const tour = await Tour.findById(tourId);
+
+    if (!tour) {
+      return res.status(404).json({ message: 'Tour not found' });
+    }
+
+    if (tour.createdBy.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'You do not have permission to delete this tour' });
+    }
+
+    await tour.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Tour deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // GET BOOKINGS FOR TOURS
 exports.getBookings = async (req, res) => {
   try {
     const tours = await Tour.find({ createdBy: req.user.userId }).select('_id');
     const tourIds = tours.map(t => t._id);
 
-    const bookings = await Booking.find({ tourId: { $in: tourIds } })
-      .populate('touristId', 'name email phone')
-      .populate('tourId', 'title destination');
+    const bookings = await Booking.find({ tourPackage: { $in: tourIds } })
+      .populate('tourist', 'name email phone')
+      .populate('tourPackage', 'title destination');
 
     res.json({
       success: true,
@@ -138,11 +163,11 @@ exports.getEarnings = async (req, res) => {
     const tourIds = tours.map(t => t._id);
 
     const bookings = await Booking.find({
-      tourId: { $in: tourIds },
+      tourPackage: { $in: tourIds },
       status: 'Completed'
     });
 
-    const totalEarnings = bookings.reduce((sum, booking) => sum + booking.amount, 0);
+    const totalEarnings = bookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
     const totalBookings = bookings.length;
 
     res.json({
@@ -165,7 +190,7 @@ exports.getDashboardStats = async (req, res) => {
     const tours = await Tour.find({ createdBy: req.user.userId });
     const tourIds = tours.map(t => t._id);
 
-    const totalBookings = await Booking.countDocuments({ tourId: { $in: tourIds } });
+    const totalBookings = await Booking.countDocuments({ tourPackage: { $in: tourIds } });
     const activeTours = tours.filter(t => t.isActive).length;
     const totalReviews = tours.reduce((sum, t) => sum + t.totalReviews, 0);
     const avgRating = tours.length > 0
@@ -249,6 +274,52 @@ exports.createTourPackage = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// UPDATE TOUR PACKAGE
+exports.updateTourPackage = async (req, res) => {
+  try {
+    const { packageId } = req.params;
+    const updateData = req.body;
+    
+    const tourPackage = await TourPackage.findByIdAndUpdate(
+      packageId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!tourPackage) {
+      return res.status(404).json({ message: 'Tour package not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Tour package updated successfully',
+      data: tourPackage
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE TOUR PACKAGE
+exports.deleteTourPackage = async (req, res) => {
+  try {
+    const { packageId } = req.params;
+    
+    const tourPackage = await TourPackage.findByIdAndDelete(packageId);
+
+    if (!tourPackage) {
+      return res.status(404).json({ message: 'Tour package not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Tour package deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
