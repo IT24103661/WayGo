@@ -98,3 +98,79 @@ exports.acceptRide = async (req, res) => {
     return res.status(500).json({ message: 'Server error accepting booking.' });
   }
 };
+
+// --- Added CRUD Operations for Driver ---
+
+exports.getAvailableJobs = async (req, res) => {
+  try {
+    // A driver sees pending bookings that don't have a driver yet
+    // Normally, this might be filtered by geographic location or permissions
+    const driver = await User.findById(req.user.userId);
+    
+    let query = { status: 'Pending', assignedDriver: { $exists: false } };
+    
+    // If not tour certified, driver can only see 'Taxi' bookings
+    if (!driver.isTourCertified) {
+      query.bookingType = 'Taxi';
+    }
+
+    const availableJobs = await Booking.find(query).populate('touristeId', 'name email phone');
+    return res.json({ data: availableJobs });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching available jobs.' });
+  }
+};
+
+exports.getMyJobs = async (req, res) => {
+  try {
+    const myJobs = await Booking.find({ assignedDriver: req.user.userId })
+      .populate('touristeId', 'name email phone')
+      .populate('assignedVehicle', 'licensePlate make model')
+      .sort({ createdAt: -1 });
+    
+    return res.json({ data: myJobs });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching your jobs.' });
+  }
+};
+
+exports.updateJobStatus = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { status } = req.body; // e.g. 'In Progress', 'Completed'
+
+    const validBookingStatuses = ['Accepted', 'In Progress', 'Completed', 'Cancelled'];
+    if (!validBookingStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid booking status.' });
+    }
+
+    const booking = await Booking.findOne({ _id: bookingId, assignedDriver: req.user.userId });
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found or not assigned to you.' });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    // If job is completed or cancelled, free up the driver & vehicle
+    if (status === 'Completed' || status === 'Cancelled') {
+      const driver = await User.findById(req.user.userId);
+      if (driver) {
+        driver.status = 'Online';
+        await driver.save();
+      }
+
+      if (booking.assignedVehicle) {
+        const vehicle = await Vehicle.findById(booking.assignedVehicle);
+        if (vehicle) {
+          vehicle.status = 'Available';
+          await vehicle.save();
+        }
+      }
+    }
+
+    return res.json({ message: `Job marked as ${status}.`, data: booking });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error updating job status.' });
+  }
+};

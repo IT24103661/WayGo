@@ -23,12 +23,9 @@ export default function DriverDashboard() {
 	const meta = PAGE_META[segment] || PAGE_META.overview;
 
 	return (
-		<div
-			className="relative flex h-screen overflow-hidden bg-slate-100"
-			style={{ fontFamily: '"Sora", "Manrope", "Segoe UI", sans-serif' }}
-		>
-			<div className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-cyan-300/30 blur-3xl" />
-			<div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-emerald-200/30 blur-3xl" />
+		<div className="relative flex h-screen overflow-hidden bg-[#f4f7f4]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
+			<div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
+			<div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl" />
 			<div className="relative z-10 flex h-full w-full">
 				<DriverSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
