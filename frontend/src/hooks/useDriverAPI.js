@@ -181,6 +181,45 @@ export function useDriverAPI() {
     }
   }, [ensureSuccess, parseResponse]);
 
+  const updateSupportRequest = async (requestId, payload) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/driver/support/${requestId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const json = await parseResponse(res);
+      ensureSuccess(res, json, 'Failed to update support request');
+      return json.data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteSupportRequest = async (requestId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/driver/support/${requestId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const json = await parseResponse(res);
+      ensureSuccess(res, json, 'Failed to delete support request');
+      return json;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -190,6 +229,8 @@ export function useDriverAPI() {
     acceptJob,
     updateJobStatus,
     submitSupportRequest,
-    getMySupportRequests
+    getMySupportRequests,
+    updateSupportRequest,
+    deleteSupportRequest
   };
 }

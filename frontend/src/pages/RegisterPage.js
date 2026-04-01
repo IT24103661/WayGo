@@ -68,6 +68,11 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     role: 'Tourist',
+    vehiclePlateNumber: '',
+    vehicleMake: '',
+    vehicleModel: '',
+    vehicleYear: '',
+    vehicleType: 'Sedan',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -92,6 +97,24 @@ export default function RegisterPage() {
       return;
     }
 
+    if (form.role === 'Driver') {
+      if (!/^[A-Z]{2,3}-\d{4}$/.test(form.vehiclePlateNumber.trim().toUpperCase())) {
+        setError('Vehicle plate number must follow format ABC-1234.');
+        return;
+      }
+      if (!form.vehicleMake.trim() || !form.vehicleModel.trim()) {
+        setError('Vehicle make and model are required for driver registration.');
+        return;
+      }
+
+      const year = Number(form.vehicleYear);
+      const maxYear = new Date().getFullYear() + 1;
+      if (Number.isNaN(year) || year < 1980 || year > maxYear) {
+        setError(`Vehicle year must be between 1980 and ${maxYear}.`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await fetch('http://localhost:5001/api/users/register', {
@@ -103,6 +126,13 @@ export default function RegisterPage() {
           phone: form.phone,
           password: form.password,
           role: form.role,
+          vehicleDetails: form.role === 'Driver' ? {
+            plateNumber: form.vehiclePlateNumber.trim().toUpperCase(),
+            make: form.vehicleMake.trim(),
+            model: form.vehicleModel.trim(),
+            year: Number(form.vehicleYear),
+            type: form.vehicleType,
+          } : undefined,
         }),
       });
 
@@ -379,6 +409,88 @@ export default function RegisterPage() {
                 </div>
               </div>
             </div>
+
+            {form.role === 'Driver' && (
+              <div className="animate-fade-in-up-d4 rounded-2xl border border-brand-200 bg-brand-50/40 p-4 space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-brand-700 uppercase tracking-widest">Vehicle Details</p>
+                  <p className="text-xs text-gray-500 mt-1">Required for driver account creation.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Plate Number</label>
+                    <input
+                      type="text"
+                      name="vehiclePlateNumber"
+                      value={form.vehiclePlateNumber}
+                      onChange={(e) => setForm((prev) => ({ ...prev, vehiclePlateNumber: e.target.value.toUpperCase() }))}
+                      placeholder="BGK-1234"
+                      className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Vehicle Type</label>
+                    <select
+                      name="vehicleType"
+                      value={form.vehicleType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                      required
+                    >
+                      <option value="Sedan">Sedan</option>
+                      <option value="SUV">SUV</option>
+                      <option value="Van">Van</option>
+                      <option value="Bus">Bus</option>
+                      <option value="Minivan">Minivan</option>
+                      <option value="Luxury">Luxury</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Make</label>
+                    <input
+                      type="text"
+                      name="vehicleMake"
+                      value={form.vehicleMake}
+                      onChange={handleChange}
+                      placeholder="Toyota"
+                      className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Model</label>
+                    <input
+                      type="text"
+                      name="vehicleModel"
+                      value={form.vehicleModel}
+                      onChange={handleChange}
+                      placeholder="Prius"
+                      className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-widest">Year</label>
+                    <input
+                      type="number"
+                      name="vehicleYear"
+                      value={form.vehicleYear}
+                      onChange={handleChange}
+                      placeholder="2021"
+                      min="1980"
+                      max={new Date().getFullYear() + 1}
+                      className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Submit */}
             <div className="animate-fade-in-up-d5">

@@ -1,6 +1,10 @@
 const User = require('../models/User');
+const Vehicle = require('../models/Vehicle');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
+const VEHICLE_PLATE_REGEX = /^[A-Z]{2,3}-\d{4}$/;
+const VEHICLE_TYPES = ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'];
 
 /* ─ helper: build a signed JWT ─ */
 const signToken = (user) =>
@@ -22,7 +26,14 @@ const sanitize = (user) => {
 // ─────────────────────────────────────
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, password, role, phone } = req.body;
+        const {
+            name,
+            email,
+            password,
+            role,
+            phone,
+            vehicleDetails
+        } = req.body;
 
         // --- Server-side validation ---
         if (!name || !email || !password || !phone) {
@@ -34,6 +45,28 @@ exports.registerUser = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ message: 'Please provide a valid email address.' });
+        }
+
+        if (role === 'Driver') {
+            const plateNumber = String(vehicleDetails?.plateNumber || '').trim().toUpperCase();
+            const make = String(vehicleDetails?.make || '').trim();
+            const model = String(vehicleDetails?.model || '').trim();
+            const vehicleType = String(vehicleDetails?.type || '').trim();
+            const year = Number(vehicleDetails?.year);
+
+            if (!plateNumber || !make || !model || !vehicleType || Number.isNaN(year)) {
+                return res.status(400).json({
+                    message: 'Driver registration requires plate number, make, model, year, and vehicle type.'
+                });
+            }
+
+            if (!VEHICLE_PLATE_REGEX.test(plateNumber)) {
+                return res.status(400).json({ message: 'Plate number must follow format ABC-1234.' });
+            }
+
+            if (!VEHICLE_TYPES.includes(vehicleType)) {
+                return res.status(400).json({ message: 'Invalid vehicle type selected.' });
+            }
         }
 
         // --- Check for duplicate email ---
@@ -54,6 +87,45 @@ exports.registerUser = async (req, res) => {
             phone:    phone.trim(),
             role:     role || 'Tourist',
         });
+
+        if (user.role === 'Driver') {
+            const plateNumber = String(vehicleDetails.plateNumber || '').trim().toUpperCase();
+            const make = String(vehicleDetails.make || '').trim();
+            const model = String(vehicleDetails.model || '').trim();
+            const vehicleType = String(vehicleDetails.type || '').trim();
+            const year = Number(vehicleDetails.year);
+
+            try {
+                await Vehicle.create({
+                    plateNumber,
+                    make,
+                    model,
+                    year,
+                    type: vehicleType,
+                    category: vehicleDetails?.category || 'Economy',
+                    capacity: Number(vehicleDetails?.capacity || 4),
+                    color: vehicleDetails?.color || '',
+                    assignedDriver: user._id,
+                    managedBy: user._id,
+                    status: 'Available'
+                });
+
+                user.vehicleDetails = {
+                    type: vehicleType,
+                    plateNumber,
+                    model
+                };
+                await user.save();
+            } catch (vehicleError) {
+                await User.findByIdAndDelete(user._id);
+
+                if (vehicleError?.code === 11000) {
+                    return res.status(400).json({ message: 'Vehicle plate number already exists.' });
+                }
+
+                return res.status(500).json({ message: 'Driver account created failed while saving vehicle details.' });
+            }
+        }
 
         // --- Return token so front-end can auto-login ---
         const token = signToken(user);

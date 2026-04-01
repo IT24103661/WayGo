@@ -43,18 +43,19 @@ const supportRequestSchema = new mongoose.Schema({
       return this.issueType === ISSUE_TYPES.URGENT_DISPATCH;
     }
   },
+  currentLocationText: {
+    type: String,
+    trim: true,
+    required: function requiredCurrentLocationText() {
+      return this.issueType === ISSUE_TYPES.URGENT_DISPATCH;
+    }
+  },
   currentLocation: {
     lat: {
-      type: Number,
-      required: function requiredLat() {
-        return this.issueType === ISSUE_TYPES.URGENT_DISPATCH;
-      }
+      type: Number
     },
     lng: {
-      type: Number,
-      required: function requiredLng() {
-        return this.issueType === ISSUE_TYPES.URGENT_DISPATCH;
-      }
+      type: Number
     }
   },
   emergencyType: {

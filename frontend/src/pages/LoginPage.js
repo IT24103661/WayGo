@@ -78,8 +78,14 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.message || 'Invalid email or password.');
       } else {
+        localStorage.removeItem('user');
         localStorage.setItem('waygo_token', data.token);
         localStorage.setItem('waygo_role', data.role);
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        window.dispatchEvent(new Event('userUpdated'));
+        window.dispatchEvent(new Event('profileUpdated'));
         setLoginSuccess(true);
         setTimeout(() => {
           const redirect = ROLE_REDIRECTS[data.role] || '/';

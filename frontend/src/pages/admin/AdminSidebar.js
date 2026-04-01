@@ -29,6 +29,7 @@ export default function AdminSidebar({ open, onClose }) {
   function handleLogout() {
     localStorage.removeItem('waygo_token');
     localStorage.removeItem('waygo_role');
+    localStorage.removeItem('user');
     navigate('/login');
   }
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 
 const VALID_STATUSES = ['Online', 'Offline', 'On Trip'];
+const VEHICLE_PLATE_REGEX = /^[A-Z]{2,3}-\d{4}$/;
 
 exports.updateStatus = async (req, res) => {
   try {
@@ -172,5 +173,66 @@ exports.updateJobStatus = async (req, res) => {
     return res.json({ message: `Job marked as ${status}.`, data: booking });
   } catch (error) {
     return res.status(500).json({ message: 'Server error updating job status.' });
+  }
+};
+
+exports.getMyVehicleProfile = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findOne({ assignedDriver: req.user.userId });
+    if (!vehicle) {
+      return res.status(404).json({ message: 'No vehicle is assigned to this driver yet.' });
+    }
+
+    return res.json({ data: vehicle });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching vehicle profile.' });
+  }
+};
+
+exports.updateMyVehicleProfile = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findOne({ assignedDriver: req.user.userId });
+    if (!vehicle) {
+      return res.status(404).json({ message: 'No vehicle is assigned to this driver yet.' });
+    }
+
+    const {
+      plateNumber,
+      make,
+      model,
+      year,
+      type,
+      category,
+      capacity,
+      color
+    } = req.body;
+
+    if (plateNumber !== undefined) {
+      const normalizedPlate = String(plateNumber).trim().toUpperCase();
+      if (!VEHICLE_PLATE_REGEX.test(normalizedPlate)) {
+        return res.status(400).json({ message: 'Plate number must follow format ABC-1234.' });
+      }
+      vehicle.plateNumber = normalizedPlate;
+    }
+
+    if (make !== undefined) vehicle.make = String(make).trim();
+    if (model !== undefined) vehicle.model = String(model).trim();
+    if (year !== undefined) vehicle.year = Number(year);
+    if (type !== undefined) vehicle.type = type;
+    if (category !== undefined) vehicle.category = category;
+    if (capacity !== undefined) vehicle.capacity = Number(capacity);
+    if (color !== undefined) vehicle.color = String(color).trim();
+
+    await vehicle.save();
+
+    return res.json({
+      message: 'Vehicle profile updated successfully.',
+      data: vehicle
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Plate number is already in use.' });
+    }
+    return res.status(500).json({ message: 'Server error updating vehicle profile.' });
   }
 };
