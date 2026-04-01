@@ -1,5 +1,5 @@
 // API endpoints for Tourist-Driver-TourManager interactions
-const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001/api';
+const API_BASE = 'http://127.0.0.1:5001/api';
 
 export const touristAPI = {
   // === Profile Management (CRUD) ===

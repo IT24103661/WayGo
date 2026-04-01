@@ -1,4 +1,4 @@
-import { MdSearch, MdArrowForward, MdStar, MdLocationOn, MdAccessTime, MdPeople, MdFilterList } from 'react-icons/md';
+import { MdSearch, MdArrowForward, MdStar, MdLocationOn, MdAccessTime, MdFilterList } from 'react-icons/md';
 import { useState } from 'react';
 import { useTouristBookings } from '../../../hooks/useTouristAPI';
 

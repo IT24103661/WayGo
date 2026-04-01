@@ -81,7 +81,10 @@ export default function PendingRequestsSection() {
                                     <MdCheckCircle />
                                     Accept
                                 </button>
-                                <button className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 font-semibold hover:bg-rose-100 transition-colors">
+                                <button
+                                    onClick={() => setRequests(prev => prev.filter(r => r._id !== request._id))}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 font-semibold hover:bg-rose-100 transition-colors"
+                                >
                                     <MdCancel />
                                     Decline
                                 </button>

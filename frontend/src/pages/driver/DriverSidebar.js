@@ -12,10 +12,10 @@ import {
 
 const NAV_ITEMS = [
   { to: '/dashboard/driver/overview', label: 'Overview', icon: MdDashboard },
+  { to: '/dashboard/driver/settings', label: 'My Profile', icon: MdSettings },
   { to: '/dashboard/driver/requests', label: 'Active Requests', icon: MdLocalTaxi },
   { to: '/dashboard/driver/itineraries', label: 'Upcoming Itineraries', icon: MdEventNote },
   { to: '/dashboard/driver/support', label: 'Support', icon: MdHelp },
-  { to: '/dashboard/driver/settings', label: 'Settings', icon: MdSettings },
 ];
 
 export default function DriverSidebar({ open, onClose }) {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MdPerson, MdEmail, MdPhone, MdSave, MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+
 
 export default function TourManagerProfileSection() {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ export default function TourManagerProfileSection() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`${API_BASE}/users/profile`, {
+      const response = await fetch(`http://localhost:5001/api/users/profile`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
         }
@@ -61,7 +61,7 @@ export default function TourManagerProfileSection() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`${API_BASE}/users/profile`, {
+      const response = await fetch(`http://localhost:5001/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export default function TourManagerProfileSection() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/users/profile`, {
+      const response = await fetch(`http://localhost:5001/api/users/profile`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`

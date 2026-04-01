@@ -17,6 +17,7 @@ require('./models/Booking');
 require('./models/TourPackage');
 require('./models/CustomQuote');
 require('./models/Review');
+require('./models/SupportRequest');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -30,6 +31,18 @@ app.use('/api/tourmanager', tourManagerRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/fleetmanager', fleetManagerRoutes);
 app.use('/api/tourist', touristRoutes);
+
+// Keep API responses consistently JSON to avoid frontend parse crashes.
+app.use('/api', (req, res) => {
+  return res.status(404).json({ message: `API route not found: ${req.method} ${req.originalUrl}` });
+});
+
+app.use((err, req, res, next) => {
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(err.status || 500).json({ message: err.message || 'Internal server error.' });
+  }
+  return next(err);
+});
 
 // Connect to DB — only start the server after a successful connection
 mongoose.connect(process.env.MONGO_URI)

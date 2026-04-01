@@ -190,6 +190,8 @@ export const useTourManagerQuotes = (status = 'Pending') => {
   };
 
   useEffect(() => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+
     fetchQuotes();
   }, [status]);
 

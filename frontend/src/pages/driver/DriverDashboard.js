@@ -15,10 +15,10 @@ export default function DriverDashboard() {
 	const segment = location.pathname.split('/').filter(Boolean).pop();
 	const PAGE_META = {
 		overview: { title: 'Driver Dashboard', subtitle: 'Manage your availability and jobs' },
+		settings: { title: 'My Profile', subtitle: 'Update your driver profile' },
 		requests: { title: 'Active Requests', subtitle: 'Taxi rides waiting for acceptance' },
 		itineraries: { title: 'Upcoming Itineraries', subtitle: 'Pre-booked tours and schedules' },
 		support: { title: 'Support', subtitle: 'Get help and report issues' },
-		settings: { title: 'Settings', subtitle: 'Update your driver profile' },
 	};
 	const meta = PAGE_META[segment] || PAGE_META.overview;
 

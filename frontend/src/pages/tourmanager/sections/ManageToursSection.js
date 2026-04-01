@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MdAddCircle, MdDelete, MdEdit, MdTour } from 'react-icons/md';
+import { MdAddCircle, MdDelete, MdEdit } from 'react-icons/md';
 import { useTourManagerTours } from '../../../hooks/useTourManagerAPI';
 
 export default function ManageToursSection() {
