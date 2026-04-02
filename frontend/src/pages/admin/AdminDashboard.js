@@ -6,6 +6,7 @@ import OverviewSection   from './sections/OverviewSection';
 import StaffSection      from './sections/StaffSection';
 import AnalyticsSection  from './sections/AnalyticsSection';
 import ConfigSection     from './sections/ConfigSection';
+import SalaryApprovalsSection from './sections/SalaryApprovalsSection';
 import ConflictsSection  from './sections/ConflictsSection';
 import useAdminGuard     from './useAdminGuard';
 
@@ -19,6 +20,7 @@ export default function AdminDashboard() {
     staff:      { title: 'Staff Management',      subtitle: 'Manage Tour & Driver Managers' },
     analytics:  { title: 'System Analytics',      subtitle: 'Revenue, users and system health' },
     config:     { title: 'Global Configuration',  subtitle: 'Platform rates and settings' },
+    salaries:   { title: 'Salary Approvals',      subtitle: 'Approve pending fleet salary requests' },
     conflicts:  { title: 'Conflict Resolution',   subtitle: 'Refunds and user bans' },
   };
   const meta = PAGE_META[segment] || PAGE_META.overview;
@@ -40,6 +42,7 @@ export default function AdminDashboard() {
             <Route path="staff"      element={<StaffSection />} />
             <Route path="analytics"  element={<AnalyticsSection />} />
             <Route path="config"     element={<ConfigSection />} />
+            <Route path="salaries"   element={<SalaryApprovalsSection />} />
             <Route path="conflicts"  element={<ConflictsSection />} />
           </Routes>
         </main>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   MdDashboard, MdLogout, MdClose,
-  MdSupervisedUserCircle, MdBarChart, MdTune, MdGavel,
+  MdSupervisedUserCircle, MdBarChart, MdTune, MdGavel, MdPayments,
 } from 'react-icons/md';
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/dashboard/admin/staff',      label: 'Staff',      icon: MdSupervisedUserCircle },
   { to: '/dashboard/admin/analytics',  label: 'Analytics',  icon: MdBarChart             },
   { to: '/dashboard/admin/config',     label: 'Config',     icon: MdTune                 },
+  { to: '/dashboard/admin/salaries',   label: 'Salaries',   icon: MdPayments             },
   { to: '/dashboard/admin/conflicts',  label: 'Conflicts',  icon: MdGavel                },
 ];
 

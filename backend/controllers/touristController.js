@@ -1,7 +1,55 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const Vehicle = require('../models/Vehicle');
 const TourPackage = require('../models/TourPackage');
+const Tour = require('../models/Tour');
 const Review = require('../models/Review');
+const FleetNotification = require('../models/FleetNotification');
+const TouristNotification = require('../models/TouristNotification');
+
+const releaseBookingResources = async (booking) => {
+  if (!booking) return;
+
+  if (booking.assignedVehicle) {
+    const vehicle = await Vehicle.findById(booking.assignedVehicle);
+    if (vehicle) {
+      vehicle.assignedDriver = null;
+      vehicle.status = 'Available';
+      await vehicle.save();
+    }
+  }
+
+  if (booking.assignedDriver) {
+    const driver = await User.findOne({ _id: booking.assignedDriver, role: 'Driver' });
+    if (driver) {
+      const hasOtherActiveBooking = await Booking.exists({
+        _id: { $ne: booking._id },
+        assignedDriver: driver._id,
+        status: { $in: ['Accepted', 'En Route'] }
+      });
+
+      if (!hasOtherActiveBooking) {
+        driver.status = 'Online';
+        await driver.save();
+      }
+    }
+  }
+};
+
+const notifyFleetManagersForBooking = async ({ booking, touristId, message }) => {
+  const fleetManagers = await User.find({ role: 'FleetManager' }).select('_id');
+  if (fleetManagers.length === 0) return;
+
+  const notifications = fleetManagers.map((manager) => ({
+    fleetManager: manager._id,
+    booking: booking._id,
+    tourist: touristId,
+    message,
+    type: 'BOOKING_CREATED'
+  }));
+
+  await FleetNotification.insertMany(notifications);
+};
 
 // ==========================================
 // 1. TOURIST PROFILE MANAGEMENT (CRUD)
@@ -67,8 +115,31 @@ exports.deleteProfile = async (req, res) => {
 // @access  Public or Private
 exports.getAvailableTours = async (req, res) => {
   try {
-    const tours = await TourPackage.find({ status: 'active' });
-    res.json(tours);
+    const tours = await Tour.find({ isActive: true })
+      .select('title description destination durationDays price rating totalReviews images')
+      .sort({ createdAt: -1 });
+
+    if (tours.length > 0) {
+      return res.json(tours);
+    }
+
+    const packages = await TourPackage.find({})
+      .select('title description durationDays flatPrice')
+      .sort({ createdAt: -1 });
+
+    const mapped = packages.map((pkg) => ({
+      _id: pkg._id,
+      title: pkg.title,
+      description: pkg.description,
+      destination: 'Sri Lanka',
+      durationDays: pkg.durationDays,
+      price: pkg.flatPrice,
+      rating: 0,
+      totalReviews: 0,
+      images: []
+    }));
+
+    return res.json(mapped);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
@@ -79,22 +150,291 @@ exports.getAvailableTours = async (req, res) => {
 // @access  Private (Tourist only)
 exports.createBooking = async (req, res) => {
   try {
-    const { tourId, date, members } = req.body;
-    
-    // Using mapping that matches your actual Booking.js Schema
+    const { tourId, date, members = 1, pickupLocation, dropoffLocation, totalPrice } = req.body;
+
+    if (!pickupLocation || !String(pickupLocation).trim()) {
+      return res.status(400).json({ message: 'pickupLocation is required.' });
+    }
+
+    const pickupTime = date ? new Date(date) : new Date();
+    if (Number.isNaN(pickupTime.getTime())) {
+      return res.status(400).json({ message: 'date must be a valid date.' });
+    }
+
+    let tour = null;
+    if (tourId && typeof tourId === 'string' && /^[a-f\d]{24}$/i.test(tourId)) {
+      tour = await Tour.findById(tourId).select('_id price');
+    }
+
+    const parsedMembers = Number(members);
+    const safeMembers = Number.isFinite(parsedMembers) && parsedMembers > 0 ? parsedMembers : 1;
+
+    const calculatedPrice = tour
+      ? Number(tour.price) * safeMembers
+      : (Number(totalPrice) > 0 ? Number(totalPrice) : 12500);
+
     const newBooking = await Booking.create({
       tourist: req.user.userId,
-      bookingType: 'Tour', // Explicitly saying it's a tour
-      tourPackage: null, // Just skipping linking it securely since tourId is coming in as MOCK ids (1, 2, 3) 
-      pickupLocation: 'Mock Location', // required field
-      pickupTime: date || new Date(), // required field
-      totalPrice: 12500, // required field
+      bookingType: 'Tour',
+      tourPackage: tour ? tour._id : null,
+      pickupLocation: String(pickupLocation).trim(),
+      dropoffLocation: dropoffLocation ? String(dropoffLocation).trim() : null,
+      pickupTime,
+      totalPrice: calculatedPrice,
       status: 'Pending'
     });
 
-    res.status(201).json(newBooking);
+    // Notify fleet managers that a new tourist booking was created.
+    const tourist = await User.findById(req.user.userId).select('name');
+    const fleetManagers = await User.find({ role: 'FleetManager' }).select('_id');
+
+    if (fleetManagers.length > 0) {
+      const message = `New booking by ${tourist?.name || 'Tourist'}: ${newBooking.pickupLocation}${newBooking.dropoffLocation ? ` -> ${newBooking.dropoffLocation}` : ''}`;
+      const notifications = fleetManagers.map((manager) => ({
+        fleetManager: manager._id,
+        booking: newBooking._id,
+        tourist: req.user.userId,
+        message,
+        type: 'BOOKING_CREATED'
+      }));
+      await FleetNotification.insertMany(notifications);
+    }
+
+    const populated = await Booking.findById(newBooking._id)
+      .populate('tourPackage', 'title destination durationDays price')
+      .populate('assignedDriver', 'name email phone')
+      .populate('assignedVehicle', 'plateNumber make model');
+
+    res.status(201).json(populated);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Create a fleet booking (Taxi)
+// @route   POST /api/tourist/fleet-bookings
+// @access  Private (Tourist only)
+exports.createFleetBooking = async (req, res) => {
+  try {
+    const { pickupLocation, dropoffLocation, pickupTime, totalPrice } = req.body;
+
+    if (!pickupLocation || !dropoffLocation || !pickupTime) {
+      return res.status(400).json({ message: 'pickupLocation, dropoffLocation and pickupTime are required.' });
+    }
+
+    const parsedPickupTime = new Date(pickupTime);
+    if (Number.isNaN(parsedPickupTime.getTime())) {
+      return res.status(400).json({ message: 'pickupTime must be a valid date.' });
+    }
+
+    const price = Number(totalPrice);
+    if (Number.isNaN(price) || price < 0) {
+      return res.status(400).json({ message: 'totalPrice must be a valid non-negative number.' });
+    }
+
+    const newBooking = await Booking.create({
+      tourist: req.user.userId,
+      bookingType: 'Taxi',
+      pickupLocation: String(pickupLocation).trim(),
+      dropoffLocation: String(dropoffLocation).trim(),
+      pickupTime: parsedPickupTime,
+      totalPrice: price,
+      status: 'Pending'
+    });
+
+    const tourist = await User.findById(req.user.userId).select('name');
+    await notifyFleetManagersForBooking({
+      booking: newBooking,
+      touristId: req.user.userId,
+      message: `New fleet booking by ${tourist?.name || 'Tourist'}: ${newBooking.pickupLocation} -> ${newBooking.dropoffLocation}`
+    });
+
+    return res.status(201).json(newBooking);
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Get tourist fleet bookings (Taxi only)
+// @route   GET /api/tourist/fleet-bookings
+// @access  Private (Tourist only)
+exports.getMyFleetBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      tourist: req.user.userId,
+      bookingType: 'Taxi'
+    })
+      .populate('assignedDriver', 'name email phone')
+      .populate('assignedVehicle', 'plateNumber make model')
+      .sort({ createdAt: -1 });
+
+    return res.json(bookings);
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Update tourist fleet booking (Taxi only)
+// @route   PUT /api/tourist/fleet-bookings/:id
+// @access  Private (Tourist only)
+exports.updateFleetBooking = async (req, res) => {
+  try {
+    const { pickupLocation, dropoffLocation, pickupTime, totalPrice } = req.body;
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) return res.status(404).json({ message: 'Fleet booking not found' });
+    if (booking.bookingType !== 'Taxi') {
+      return res.status(400).json({ message: 'This booking is not a fleet booking.' });
+    }
+    if (booking.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized to modify this fleet booking' });
+    }
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      return res.status(400).json({ message: 'Cannot modify a completed or cancelled fleet booking' });
+    }
+
+    if (pickupLocation) booking.pickupLocation = String(pickupLocation).trim();
+    if (dropoffLocation) booking.dropoffLocation = String(dropoffLocation).trim();
+    if (pickupTime) {
+      const parsedPickupTime = new Date(pickupTime);
+      if (Number.isNaN(parsedPickupTime.getTime())) {
+        return res.status(400).json({ message: 'pickupTime must be a valid date.' });
+      }
+      booking.pickupTime = parsedPickupTime;
+    }
+    if (totalPrice !== undefined) {
+      const price = Number(totalPrice);
+      if (Number.isNaN(price) || price < 0) {
+        return res.status(400).json({ message: 'totalPrice must be a valid non-negative number.' });
+      }
+      booking.totalPrice = price;
+    }
+
+    const updated = await booking.save();
+    return res.json(updated);
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Cancel tourist fleet booking (Taxi only)
+// @route   PUT /api/tourist/fleet-bookings/:id/cancel
+// @access  Private (Tourist only)
+exports.cancelFleetBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) return res.status(404).json({ message: 'Fleet booking not found' });
+    if (booking.bookingType !== 'Taxi') {
+      return res.status(400).json({ message: 'This booking is not a fleet booking.' });
+    }
+    if (booking.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized to cancel this fleet booking' });
+    }
+
+    booking.status = 'Cancelled';
+    await booking.save();
+    await releaseBookingResources(booking);
+
+    return res.json({ message: 'Fleet booking canceled successfully', booking });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Delete tourist fleet booking permanently (Taxi only)
+// @route   DELETE /api/tourist/fleet-bookings/:id
+// @access  Private (Tourist only)
+exports.deleteFleetBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) return res.status(404).json({ message: 'Fleet booking not found' });
+    if (booking.bookingType !== 'Taxi') {
+      return res.status(400).json({ message: 'This booking is not a fleet booking.' });
+    }
+    if (booking.tourist.toString() !== req.user.userId.toString()) {
+      return res.status(401).json({ message: 'Not authorized to delete this fleet booking' });
+    }
+
+    await releaseBookingResources(booking);
+    await booking.deleteOne();
+    return res.json({ message: 'Fleet booking deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Get tourist notifications
+// @route   GET /api/tourist/notifications
+// @access  Private (Tourist only)
+exports.getTouristNotifications = async (req, res) => {
+  try {
+    const notifications = await TouristNotification.find({ tourist: req.user.userId })
+      .populate({
+        path: 'booking',
+        select: 'pickupLocation dropoffLocation pickupTime status totalPrice assignedDriver assignedVehicle',
+        populate: [
+          { path: 'assignedDriver', select: 'name phone email' },
+          { path: 'assignedVehicle', select: 'plateNumber make model' }
+        ]
+      })
+      .populate('fleetManager', 'name email')
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: notifications.length,
+      data: notifications
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Mark tourist notification as read
+// @route   PATCH /api/tourist/notifications/:id/read
+// @access  Private (Tourist only)
+exports.markTouristNotificationRead = async (req, res) => {
+  try {
+    const notification = await TouristNotification.findOneAndUpdate(
+      { _id: req.params.id, tourist: req.user.userId },
+      { isRead: true },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found.' });
+    }
+
+    return res.json({
+      success: true,
+      data: notification
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Mark all tourist notifications as read
+// @route   PATCH /api/tourist/notifications/read-all
+// @access  Private (Tourist only)
+exports.markAllTouristNotificationsRead = async (req, res) => {
+  try {
+    const result = await TouristNotification.updateMany(
+      { tourist: req.user.userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    return res.json({
+      success: true,
+      message: 'All notifications marked as read.',
+      data: {
+        modifiedCount: result.modifiedCount || 0
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
 

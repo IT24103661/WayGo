@@ -13,7 +13,7 @@ export const useTouristBookings = () => {
     try {
       setLoading(true);
       const data = await touristAPI.getBookings();
-      setBookings(data);
+      setBookings(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -26,7 +26,7 @@ export const useTouristBookings = () => {
     try {
       setLoading(true);
       const newBooking = await touristAPI.createBooking(bookingData);
-      setBookings([...bookings, newBooking]);
+      setBookings((prev) => [...prev, newBooking]);
       setError(null);
       return newBooking;
     } catch (err) {
@@ -41,7 +41,7 @@ export const useTouristBookings = () => {
     try {
       setLoading(true);
       await touristAPI.cancelBooking(bookingId);
-      setBookings(bookings.filter(b => b._id !== bookingId));
+      setBookings((prev) => prev.filter((b) => b._id !== bookingId));
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -51,26 +51,119 @@ export const useTouristBookings = () => {
     }
     };
 
-    const updateBooking = async (bookingId, updatedData) => {
-      try {
-        setLoading(true);
-        const updatedBooking = await touristAPI.updateBooking(bookingId, updatedData);
-        setBookings(bookings.map(b => b._id === bookingId ? updatedBooking : b));
-        setError(null);
-        return updatedBooking;
-      } catch (err) {
-        setError(err.message);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    };
+  const updateBooking = async (bookingId, updatedData) => {
+    try {
+      setLoading(true);
+      const updatedBooking = await touristAPI.updateBooking(bookingId, updatedData);
+      setBookings((prev) => prev.map((b) => (b._id === bookingId ? updatedBooking : b)));
+      setError(null);
+      return updatedBooking;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchBookings();
   }, []);
 
-  return { bookings, loading, error, createBooking, cancelBooking, refetch: fetchBookings };
+  return { bookings, loading, error, createBooking, cancelBooking, updateBooking, refetch: fetchBookings };
+};
+
+export const useTouristFleetBookings = () => {
+  const [fleetBookings, setFleetBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchFleetBookings = async () => {
+    try {
+      setLoading(true);
+      const data = await touristAPI.getFleetBookings();
+      setFleetBookings(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createFleetBooking = async (payload) => {
+    try {
+      setLoading(true);
+      const created = await touristAPI.createFleetBooking(payload);
+      setFleetBookings((prev) => [created, ...prev]);
+      setError(null);
+      return created;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateFleetBooking = async (bookingId, payload) => {
+    try {
+      setLoading(true);
+      const updated = await touristAPI.updateFleetBooking(bookingId, payload);
+      setFleetBookings((prev) => prev.map((b) => (b._id === bookingId ? updated : b)));
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelFleetBooking = async (bookingId) => {
+    try {
+      setLoading(true);
+      const result = await touristAPI.cancelFleetBooking(bookingId);
+      setFleetBookings((prev) => prev.map((b) => (b._id === bookingId ? result.booking : b)));
+      setError(null);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteFleetBooking = async (bookingId) => {
+    try {
+      setLoading(true);
+      await touristAPI.deleteFleetBooking(bookingId);
+      setFleetBookings((prev) => prev.filter((b) => b._id !== bookingId));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFleetBookings();
+  }, []);
+
+  return {
+    fleetBookings,
+    loading,
+    error,
+    refetch: fetchFleetBookings,
+    createFleetBooking,
+    updateFleetBooking,
+    cancelFleetBooking,
+    deleteFleetBooking
+  };
 };
 
 /**
@@ -86,7 +179,7 @@ export const useTouristTours = (filters = {}) => {
       try {
         setLoading(true);
         const data = await touristAPI.getTours(filters);
-        setTours(data);
+        setTours(Array.isArray(data) ? data : []);
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -143,7 +236,7 @@ export const useTouristReviews = () => {
     try {
       setLoading(true);
       const data = await touristAPI.getReviews();
-      setReviews(data);
+      setReviews(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -156,7 +249,7 @@ export const useTouristReviews = () => {
     try {
       setLoading(true);
       const newReview = await touristAPI.submitReview(bookingId, rating, comment);
-      setReviews([...reviews, newReview]);
+      setReviews((prev) => [...prev, newReview]);
       setError(null);
       return newReview;
     } catch (err) {
@@ -186,7 +279,7 @@ export const useTouristNotifications = () => {
     try {
       setLoading(true);
       const data = await touristAPI.getNotifications();
-      setNotifications(data);
+      setNotifications(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -198,9 +291,18 @@ export const useTouristNotifications = () => {
   const markAsRead = async (notificationId) => {
     try {
       await touristAPI.markNotificationRead(notificationId);
-      setNotifications(notifications.map(n => 
-        n._id === notificationId ? { ...n, read: true } : n
+      setNotifications((prev) => prev.map((n) =>
+        n._id === notificationId ? { ...n, isRead: true } : n
       ));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await touristAPI.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (err) {
       setError(err.message);
     }
@@ -214,7 +316,7 @@ export const useTouristNotifications = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return { notifications, loading, error, markAsRead, refetch: fetchNotifications };
+  return { notifications, loading, error, markAsRead, markAllAsRead, refetch: fetchNotifications };
 };
 
 /**

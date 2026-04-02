@@ -6,10 +6,18 @@ const {
   deleteProfile,
   getAvailableTours,
   createBooking,
+  createFleetBooking,
   getMyBookings,
+  getMyFleetBookings,
   cancelBooking,
+  cancelFleetBooking,
   updateBooking,
+  updateFleetBooking,
   deleteBooking,
+  deleteFleetBooking,
+  getTouristNotifications,
+  markTouristNotificationRead,
+  markAllTouristNotificationsRead,
   getReviews,
   createReview,
   updateReview,
@@ -43,6 +51,26 @@ router.route('/bookings/:id')
 
 router.route('/bookings/:id/cancel')
   .put(cancelBooking);
+
+router.route('/fleet-bookings')
+  .get(getMyFleetBookings)
+  .post(createFleetBooking);
+
+router.route('/fleet-bookings/:id')
+  .put(updateFleetBooking)
+  .delete(deleteFleetBooking);
+
+router.route('/fleet-bookings/:id/cancel')
+  .put(cancelFleetBooking);
+
+router.route('/notifications')
+  .get(getTouristNotifications);
+
+router.route('/notifications/:id/read')
+  .patch(markTouristNotificationRead);
+
+router.route('/notifications/read-all')
+  .patch(markAllTouristNotificationsRead);
 
 // 3. Reviews Routes
 router.route('/reviews')

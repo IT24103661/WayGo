@@ -1,11 +1,5 @@
 import { MdNotifications, MdCheckCircle, MdInfo, MdWarning, MdClose } from 'react-icons/md';
-
-const NOTIFICATIONS = [
-  { id: 1, type: 'success', title: 'Booking Confirmed!', message: 'Your booking for Sigiriya Rock Tour on Mar 15 is confirmed.', time: '2 hours ago', icon: MdCheckCircle },
-  { id: 2, type: 'info', title: 'Driver Assigned', message: 'Ruwan D. has been assigned as your driver for the tour.', time: '1 day ago', icon: MdInfo },
-  { id: 3, type: 'warning', title: 'Payment Due', message: 'Please complete payment for booking #BK-0044 before the trip.', time: '2 days ago', icon: MdWarning },
-  { id: 4, type: 'success', title: 'Tour Completed', message: 'Thank you for joining the Yala Safari! Share your experience.', time: '5 days ago', icon: MdCheckCircle },
-];
+import { useTouristNotifications } from '../../../hooks/useTouristAPI';
 
 const TYPE_BADGE = {
   success: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
@@ -22,6 +16,44 @@ const TYPE_ICON_COLOR = {
 };
 
 export default function NotificationsSection() {
+  const { notifications, loading, error, markAsRead, markAllAsRead } = useTouristNotifications();
+
+  const mappedNotifications = (notifications || []).map((item) => {
+    let type = 'info';
+    let icon = MdInfo;
+
+    if (item.type === 'BOOKING_ASSIGNED' || item.type === 'BOOKING_STATUS') {
+      type = 'success';
+      icon = MdCheckCircle;
+    } else if (item.type === 'BOOKING_DELETED') {
+      type = 'warning';
+      icon = MdWarning;
+    }
+
+    return {
+      id: item._id,
+      type,
+      title: item.type === 'BOOKING_ASSIGNED'
+        ? 'Booking Assigned'
+        : item.type === 'BOOKING_STATUS'
+          ? 'Booking Status Updated'
+          : item.type === 'BOOKING_DELETED'
+            ? 'Booking Removed'
+            : 'Booking Update',
+      message: item.message,
+      time: item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just now',
+      icon,
+      isRead: Boolean(item.isRead),
+      driverName: item.booking?.assignedDriver?.name || '',
+      driverPhone: item.booking?.assignedDriver?.phone || '',
+      vehicleLabel: item.booking?.assignedVehicle
+        ? `${item.booking.assignedVehicle.plateNumber || ''} ${item.booking.assignedVehicle.make || ''} ${item.booking.assignedVehicle.model || ''}`.trim()
+        : ''
+    };
+  });
+
+  const unreadCount = mappedNotifications.filter((item) => !item.isRead).length;
+
   return (
     <div className="space-y-6 animate-fade-in-up font-sans">
       
@@ -33,17 +65,39 @@ export default function NotificationsSection() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-zinc-100 tracking-tight">Notifications</h2>
-            <p className="text-sm text-zinc-400 font-medium">{NOTIFICATIONS.length} unread messages</p>
+            <p className="text-sm text-zinc-400 font-medium">{unreadCount} unread messages</p>
           </div>
         </div>
-        <button className="text-sm bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(139,92,246,0.25)] hover:shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+        <button
+          type="button"
+          onClick={markAllAsRead}
+          className="text-sm bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(139,92,246,0.25)] hover:shadow-[0_0_20px_rgba(139,92,246,0.4)]"
+        >
           Mark all as read
         </button>
       </div>
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {NOTIFICATIONS.map((notif) => {
+        {loading && (
+          <div className="bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-zinc-800/80 p-5 text-zinc-400">
+            Loading notifications...
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-rose-800/60 p-5 text-rose-300">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && mappedNotifications.length === 0 && (
+          <div className="bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-zinc-800/80 p-5 text-zinc-400">
+            No notifications yet.
+          </div>
+        )}
+
+        {!loading && !error && mappedNotifications.map((notif) => {
           const Icon = notif.icon;
           return (
             <div 
@@ -70,10 +124,24 @@ export default function NotificationsSection() {
                   <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed group-hover:text-zinc-300 transition-colors">
                     {notif.message}
                   </p>
+                  {notif.driverName && (
+                    <p className="text-xs text-cyan-300 mt-2 font-semibold">
+                      Driver: {notif.driverName} {notif.driverPhone ? `| Contact: ${notif.driverPhone}` : ''}
+                    </p>
+                  )}
+                  {notif.vehicleLabel && (
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Vehicle: {notif.vehicleLabel}
+                    </p>
+                  )}
                 </div>
 
                 {/* Close Button */}
-                <button className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-xl flex-shrink-0 transition-all duration-200">
+                <button
+                  type="button"
+                  onClick={() => markAsRead(notif.id)}
+                  className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-xl flex-shrink-0 transition-all duration-200"
+                >
                   <MdClose className="text-lg" />
                 </button>
               </div>

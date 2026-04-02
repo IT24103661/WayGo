@@ -26,6 +26,27 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    managedByFleetManager: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+        index: true
+    },
+    company: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    depot: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    region: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     status: {
         type: String,
         enum: ['Online', 'Offline', 'On Trip'],

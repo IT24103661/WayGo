@@ -1,7 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -18,6 +19,9 @@ require('./models/TourPackage');
 require('./models/CustomQuote');
 require('./models/Review');
 require('./models/SupportRequest');
+require('./models/FleetNotification');
+require('./models/TouristNotification');
+const DriverSalary = require('./models/DriverSalary');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -49,6 +53,11 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected!');
     console.log(`   Database: ${mongoose.connection.name}`);
+
+    // Keep salary indexes aligned with schema (drops stale unique indexes if needed).
+    DriverSalary.syncIndexes().catch((error) => {
+      console.warn('⚠️ DriverSalary index sync warning:', error.message);
+    });
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {

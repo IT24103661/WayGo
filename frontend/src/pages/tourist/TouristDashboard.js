@@ -6,6 +6,7 @@ import OverviewSection from './sections/OverviewSection';
 import ProfileSection from './sections/ProfileSection';
 import ToursSection from './sections/ToursSection';
 import BookingsSection from './sections/BookingsSection';
+import FleetBookingsSection from './sections/FleetBookingsSection';
 import ReviewsSection from './sections/ReviewsSection';
 import NotificationsSection from './sections/NotificationsSection';
 import SupportSection from './sections/SupportSection';
@@ -18,6 +19,7 @@ export default function TouristDashboard() {
     overview: { title: 'Dashboard', subtitle: 'Welcome back to your travel hub!' },
     tours: { title: 'Browse Tours', subtitle: 'Discover amazing travel packages' },
     bookings: { title: 'My Bookings', subtitle: 'Manage your upcoming trips' },
+    fleetbookings: { title: 'Fleet Bookings', subtitle: 'Create and manage your fleet rides' },
     reviews: { title: 'My Reviews', subtitle: 'Share your travel experiences' },
     notifications: { title: 'Notifications', subtitle: 'Stay updated with your bookings' },
     support: { title: 'Support', subtitle: 'Get help whenever you need it' },
@@ -46,6 +48,7 @@ export default function TouristDashboard() {
               <Route path="profile" element={<ProfileSection />} />
               <Route path="tours" element={<ToursSection />} />
               <Route path="bookings" element={<BookingsSection />} />
+              <Route path="fleetbookings" element={<FleetBookingsSection />} />
               <Route path="reviews" element={<ReviewsSection />} />
               <Route path="notifications" element={<NotificationsSection />} />
               <Route path="support" element={<SupportSection />} />

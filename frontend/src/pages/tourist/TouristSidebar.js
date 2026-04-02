@@ -6,6 +6,7 @@ import {
   MdPerson,
   MdDashboard,
   MdMap,
+  MdLocalTaxi,
   MdPermContactCalendar,
   MdStar,
   MdNotifications,
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { to: '/dashboard/tourist/profile', label: 'My Profile', icon: MdPerson },
   { to: '/dashboard/tourist/tours', label: 'Browse Tours', icon: MdMap },
   { to: '/dashboard/tourist/bookings', label: 'My Bookings', icon: MdPermContactCalendar },
+  { to: '/dashboard/tourist/fleetbookings', label: 'Fleet Bookings', icon: MdLocalTaxi },
   { to: '/dashboard/tourist/reviews', label: 'Reviews', icon: MdStar },
   { to: '/dashboard/tourist/notifications', label: 'Notifications', icon: MdNotifications },
   { to: '/dashboard/tourist/support', label: 'Support', icon: MdHelp },
@@ -28,6 +30,7 @@ export default function TouristSidebar({ open, onClose }) {
   const navigate = useNavigate();
   const [touristName, setTouristName] = useState('Tourist');
   const [photoUrl, setPhotoUrl] = useState(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     // 1. Try to get basic name from token payload initially for speed
@@ -51,6 +54,40 @@ export default function TouristSidebar({ open, onClose }) {
         setPhotoUrl(`https://www.gravatar.com/avatar/${hash}?d=identicon&s=150`);
       }
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchUnreadNotifications = async () => {
+      try {
+        const items = await touristAPI.getNotifications();
+        const unread = (Array.isArray(items) ? items : []).filter((item) => !item.isRead).length;
+        if (mounted) {
+          setUnreadNotifications(unread);
+        }
+      } catch {
+        if (mounted) {
+          setUnreadNotifications(0);
+        }
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUnreadNotifications();
+      }
+    };
+
+    fetchUnreadNotifications();
+    const interval = window.setInterval(fetchUnreadNotifications, 15000);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   function handleLogout() {
@@ -121,7 +158,18 @@ export default function TouristSidebar({ open, onClose }) {
               }
             >
               <Icon className="text-xl transition-colors" />
-              <span className="tracking-wide relative top-[1px]">{label}</span>
+              <span className="tracking-wide relative top-[1px] flex-1">{label}</span>
+              {to === '/dashboard/tourist/notifications' && unreadNotifications > 0 && (
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                </span>
+              )}
+              {to === '/dashboard/tourist/notifications' && unreadNotifications > 0 && (
+                <span className="ml-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

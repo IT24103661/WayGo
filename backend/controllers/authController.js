@@ -210,7 +210,7 @@ exports.getProfile = async (req, res) => {
 // ─────────────────────────────────────
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, phone, email } = req.body;
+        const { name, phone, email, company, depot, region } = req.body;
         
         const user = await User.findById(req.user.userId);
         if (!user) {
@@ -226,8 +226,11 @@ exports.updateProfile = async (req, res) => {
             user.email = email.trim();
         }
 
-        if (name) user.name = name.trim();
-        if (phone) user.phone = phone.trim();
+        if (name !== undefined) user.name = String(name).trim();
+        if (phone !== undefined) user.phone = String(phone).trim();
+        if (company !== undefined) user.company = String(company).trim();
+        if (depot !== undefined) user.depot = String(depot).trim();
+        if (region !== undefined) user.region = String(region).trim();
 
         await user.save();
         

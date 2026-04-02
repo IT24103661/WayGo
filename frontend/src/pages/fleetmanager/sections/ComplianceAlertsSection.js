@@ -1,4 +1,5 @@
 import { useFleetMaintenanceAlerts } from '../../../hooks/useFleetManagerAPI';
+import { MdWarning } from 'react-icons/md';
 
 const FALLBACK_COMPLIANCE = [
   {
@@ -34,11 +35,17 @@ export default function ComplianceAlertsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Compliance Alerts</h2>
-        <p className="text-sm text-gray-500">Expiring documents that require immediate action.</p>
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-cyan-900 text-white flex items-center justify-center shadow-md shadow-cyan-300/70">
+            <MdWarning className="text-lg" />
+          </span>
+          <h2 className="text-xl font-bold text-cyan-950">Compliance Alerts</h2>
+        </div>
+        <p className="text-sm text-cyan-700/80">Expiring documents that require immediate action.</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <div className="relative bg-white rounded-2xl shadow-sm border border-cyan-100 p-5 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-200 via-cyan-500/70 to-sky-200" />
         <div className="space-y-4">
           {loading && (
             <div className="text-gray-500">Loading compliance alerts...</div>
@@ -47,12 +54,12 @@ export default function ComplianceAlertsSection() {
             <div className="text-gray-500">No compliance alerts at the moment.</div>
           )}
           {!loading && flattenedAlerts.map((alert) => (
-            <div key={alert.id} className="flex items-center justify-between p-4 rounded-xl bg-rose-50 border border-rose-100">
+            <div key={alert.id} className="flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-100">
               <div>
-                <p className="text-sm font-semibold text-rose-800">{alert.plate}</p>
-                <p className="text-xs text-rose-700">{alert.item}</p>
+                <p className="text-sm font-semibold text-amber-900">{alert.plate}</p>
+                <p className="text-xs text-amber-800">{alert.item}</p>
               </div>
-              <span className="text-xs font-semibold text-rose-700">
+              <span className="text-xs font-semibold text-amber-800 px-2 py-0.5 rounded-full bg-amber-100/70 transition-all duration-200 hover:shadow-[0_8px_18px_-12px_rgba(217,119,6,0.8)]">
                 {new Date(alert.date).toLocaleDateString()}
               </span>
             </div>

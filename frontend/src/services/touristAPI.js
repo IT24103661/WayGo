@@ -1,136 +1,131 @@
-// API endpoints for Tourist-Driver-TourManager interactions
-const API_BASE = 'http://127.0.0.1:5001/api';
+const API_BASE = 'http://localhost:5001/api';
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
+});
+
+const parseJson = async (res) => {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('Invalid response received from server.');
+  }
+};
+
+const unwrap = (payload) => {
+  if (payload && typeof payload === 'object' && 'data' in payload && payload.success !== undefined) {
+    return payload.data;
+  }
+  return payload;
+};
+
+const request = async (path, options = {}) => {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...authHeaders(),
+      ...(options.headers || {})
+    }
+  });
+
+  const json = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(json.message || `Request failed with status ${res.status}`);
+  }
+  return unwrap(json);
+};
 
 export const touristAPI = {
-  // === Profile Management (CRUD) ===
-  getProfile: () => fetch(`${API_BASE}/tourist/profile`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  getProfile: () => request('/tourist/profile'),
 
-  updateProfile: (profileData) => fetch(`${API_BASE}/tourist/profile`, {
+  updateProfile: (profileData) => request('/tourist/profile', {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
     body: JSON.stringify(profileData)
-  }).then(r => r.json()),
+  }),
 
-  deleteProfile: () => fetch(`${API_BASE}/tourist/profile`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  deleteProfile: () => request('/tourist/profile', {
+    method: 'DELETE'
+  }),
 
-  // === Bookings Management (CRUD) ===
-  getBookings: () => fetch(`${API_BASE}/tourist/bookings`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  getBookings: () => request('/tourist/bookings'),
 
-  createBooking: (bookingData) => fetch(`${API_BASE}/tourist/bookings`, {
+  createBooking: (bookingData) => request('/tourist/bookings', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
     body: JSON.stringify(bookingData)
-  }).then(async r => {
-    if (!r.ok) {
-        let errData = {};
-        try { errData = await r.json(); } catch(e) {}
-        throw new Error(errData.message || errData.error || 'Request failed with status ' + r.status);
-    }
-    return r.json();
   }),
 
-  cancelBooking: (bookingId) => fetch(`${API_BASE}/tourist/bookings/${bookingId}/cancel`, {
-    method: 'PUT',
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  getFleetBookings: () => request('/tourist/fleet-bookings'),
 
-  updateBooking: (bookingId, updatedData) => fetch(`${API_BASE}/tourist/bookings/${bookingId}`, {
+  createFleetBooking: (bookingData) => request('/tourist/fleet-bookings', {
+    method: 'POST',
+    body: JSON.stringify(bookingData)
+  }),
+
+  updateFleetBooking: (bookingId, bookingData) => request(`/tourist/fleet-bookings/${bookingId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
+    body: JSON.stringify(bookingData)
+  }),
+
+  cancelFleetBooking: (bookingId) => request(`/tourist/fleet-bookings/${bookingId}/cancel`, {
+    method: 'PUT'
+  }),
+
+  deleteFleetBooking: (bookingId) => request(`/tourist/fleet-bookings/${bookingId}`, {
+    method: 'DELETE'
+  }),
+
+  cancelBooking: (bookingId) => request(`/tourist/bookings/${bookingId}/cancel`, {
+    method: 'PUT'
+  }),
+
+  updateBooking: (bookingId, updatedData) => request(`/tourist/bookings/${bookingId}`, {
+    method: 'PUT',
     body: JSON.stringify(updatedData)
-  }).then(async r => {
-    if (!r.ok) {
-        let errData = {};
-        try { errData = await r.json(); } catch(e) {}
-        throw new Error(errData.message || errData.error || 'Request failed with status ' + r.status);
-    }
-    return r.json();
   }),
 
+  getTours: () => request('/tourist/tours'),
 
-  // === Tours (Available to Tourist) ===
-  getTours: () => fetch(`${API_BASE}/tourist/tours`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  getReviews: () => request('/tourist/reviews'),
 
-  // Drivers (for ride bookings & contact)
-  getAvailableDrivers: (location, date) => fetch(`${API_BASE}/drivers/available?location=${location}&date=${date}`)
-    .then(r => r.json()),
-  getDriverDetails: (driverId) => fetch(`${API_BASE}/drivers/${driverId}`)
-    .then(r => r.json()),
-  contactDriver: (driverId, message) => fetch(`${API_BASE}/messages`, {
+  createReview: (reviewData) => request('/tourist/reviews', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
-    body: JSON.stringify({ receiverId: driverId, message })
-  }).then(r => r.json()),
-
-  // Reviews (feedback to Drivers & TourManagers)
-  getReviews: () => fetch(`${API_BASE}/tourist/reviews`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
-
-  createReview: (reviewData) => fetch(`${API_BASE}/tourist/reviews`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
     body: JSON.stringify(reviewData)
-  }).then(async r => {
-    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to create review'); }
-    return r.json();
   }),
 
-  updateReview: (id, reviewData) => fetch(`${API_BASE}/tourist/reviews/${id}`, {
+  updateReview: (id, reviewData) => request(`/tourist/reviews/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
     body: JSON.stringify(reviewData)
-  }).then(async r => {
-    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to update review'); }
-    return r.json();
   }),
 
-  deleteReview: (id) => fetch(`${API_BASE}/tourist/reviews/${id}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(async r => {
-    if (!r.ok) { let e={}; try{e=await r.json();}catch(x){} throw new Error(e.message||'failed to delete review'); }
-    return r.json();
+  deleteReview: (id) => request(`/tourist/reviews/${id}`, {
+    method: 'DELETE'
   }),
 
-  // Notifications
-  getNotifications: () => fetch(`${API_BASE}/notifications`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('waygo_token')}` }
-  }).then(r => r.json()),
+  // Backward-compatible alias used by old hook signatures.
+  submitReview: (bookingId, rating, comment) => request('/tourist/reviews', {
+    method: 'POST',
+    body: JSON.stringify({
+      tourName: bookingId ? `Booking ${bookingId}` : 'General Tour',
+      rating,
+      text: comment
+    })
+  }),
 
-  markNotificationRead: (notificationId) => fetch(`${API_BASE}/notifications/${notificationId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-    },
-    body: JSON.stringify({ read: true })
-  }).then(r => r.json()),
+  getNotifications: () => request('/tourist/notifications'),
+
+  markNotificationRead: (notificationId) => request(`/tourist/notifications/${notificationId}/read`, {
+    method: 'PATCH'
+  }),
+
+  markAllNotificationsRead: () => request('/tourist/notifications/read-all', {
+    method: 'PATCH'
+  }),
+
+  // Placeholder stubs for sections that are still UI-mock based.
+  getAvailableDrivers: async () => [],
+  getDriverDetails: async () => null,
+  contactDriver: async () => ({ success: true })
 };
