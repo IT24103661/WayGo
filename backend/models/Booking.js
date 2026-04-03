@@ -46,6 +46,91 @@ const bookingSchema = new mongoose.Schema({
     totalPrice: {
         type: Number,
         required: true
+    },
+    packageOptions: {
+        tourTitle: {
+            type: String,
+            default: ''
+        },
+        checkInDate: {
+            type: Date,
+            default: null
+        },
+        checkOutDate: {
+            type: Date,
+            default: null
+        },
+        adults: {
+            type: Number,
+            default: 1
+        },
+        children: {
+            type: Number,
+            default: 0
+        },
+        nights: {
+            type: Number,
+            default: 1
+        },
+        roomType: {
+            type: String,
+            enum: ['Standard', 'Deluxe', 'Family', 'Suite'],
+            default: 'Standard'
+        },
+        roomCount: {
+            type: Number,
+            default: 1
+        },
+        mealPlan: {
+            type: String,
+            enum: ['No Meals', 'Breakfast', 'Half Board', 'Full Board'],
+            default: 'No Meals'
+        },
+        dietPreference: {
+            type: String,
+            default: ''
+        },
+        extras: {
+            airportPickup: {
+                type: Boolean,
+                default: false
+            },
+            privateGuide: {
+                type: Boolean,
+                default: false
+            },
+            activityAddons: {
+                type: [String],
+                default: []
+            }
+        },
+        pricing: {
+            tourBase: {
+                type: Number,
+                default: 0
+            },
+            roomCost: {
+                type: Number,
+                default: 0
+            },
+            mealCost: {
+                type: Number,
+                default: 0
+            },
+            extrasCost: {
+                type: Number,
+                default: 0
+            },
+            finalTotal: {
+                type: Number,
+                default: 0
+            }
+        }
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['Pending', 'Paid', 'Refunded'],
+        default: 'Pending'
     }
 }, {
     timestamps: true

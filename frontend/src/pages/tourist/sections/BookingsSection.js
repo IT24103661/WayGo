@@ -1,20 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
-import { MdCheckCircle, MdHourglassEmpty, MdCancel, MdMoreVert, MdDirectionsCar, MdTour, MdCalendarToday, MdEdit, MdSupportAgent } from 'react-icons/md';
+import { useMemo, useState } from 'react';
+import {
+  MdCheckCircle,
+  MdHourglassEmpty,
+  MdCancel,
+  MdDirectionsCar,
+  MdTour,
+  MdCalendarToday,
+  MdEdit,
+  MdDelete,
+  MdPhone,
+  MdSupportAgent,
+  MdClose,
+  MdLocationOn,
+  MdGroup,
+  MdReceiptLong
+} from 'react-icons/md';
 import { useTouristBookings } from '../../../hooks/useTouristAPI';
 
-// Mock fallback just in case
-const MOCK_BOOKINGS = [
-  { id: '#BK-0041', type: 'Tour', destination: 'Sigiriya Rock', driver: 'Ruwan D.', date: 'Mar 15, 2026', amount: 'LKR 12,500', status: 'Upcoming' },
-  { id: '#BK-0042', type: 'Taxi', destination: 'CMB → Kandy', driver: 'Kamal P.', date: 'Mar 12, 2026', amount: 'LKR 4,200', status: 'Completed' },
-  { id: '#BK-0043', type: 'Tour', destination: 'Yala Safari', driver: 'Nilantha S.', date: 'Mar 20, 2026', amount: 'LKR 28,000', status: 'Pending' },
-  { id: '#BK-0044', type: 'Taxi', destination: 'BIA → Colombo', driver: 'Pradeep M.', date: 'Mar 10, 2026', amount: 'LKR 3,800', status: 'Completed' },
-  { id: '#BK-0045', type: 'Tour', destination: 'Ella Train Ride', driver: 'Unassigned', date: 'Mar 8, 2026', amount: 'LKR 9,000', status: 'Cancelled' },
-];
-
 const STATUS_BADGE = {
-  'Upcoming': 'bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm',
+  'Upcoming': 'bg-cyan-50 text-cyan-700 border border-cyan-200 shadow-sm',
   'Completed': 'bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm',
   'Pending': 'bg-amber-50 text-amber-600 border border-amber-200 shadow-sm',
+  'Accepted': 'bg-sky-50 text-sky-700 border border-sky-200 shadow-sm',
+  'En Route': 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm',
   'Cancelled': 'bg-rose-50 text-rose-600 border border-rose-200 shadow-sm',
 };
 
@@ -22,46 +30,312 @@ const STATUS_ICON = {
   'Upcoming': MdHourglassEmpty,
   'Completed': MdCheckCircle,
   'Pending': MdHourglassEmpty,
+  'Accepted': MdCalendarToday,
+  'En Route': MdDirectionsCar,
   'Cancelled': MdCancel,
 };
 
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'tour', label: 'Tours' },
+  { key: 'taxi', label: 'Taxi' }
+];
+
+const STATUS_TABS = [
+  { key: 'all', label: 'All Reservations' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'ongoing', label: 'Ongoing' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' }
+];
+
+const normalizeStatus = (statusValue) => {
+  const value = String(statusValue || '').trim();
+  if (!value) return 'Pending';
+  if (value.toLowerCase() === 'accepted') return 'Upcoming';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const formatBookingDate = (dateValue) => {
+  if (!dateValue) return '-';
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
+const formatCurrency = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
+
+const deriveStatusBucket = (status) => {
+  if (status === 'Completed') return 'completed';
+  if (status === 'Cancelled') return 'cancelled';
+  if (status === 'En Route') return 'ongoing';
+  if (status === 'Pending' || status === 'Upcoming' || status === 'Accepted') return 'upcoming';
+  return 'upcoming';
+};
+
+const BOOKING_TIMELINE = ['Requested', 'Confirmed', 'Assigned', 'Completed'];
+
+const ROOM_RATES = {
+  Standard: 6500,
+  Deluxe: 9800,
+  Family: 14200,
+  Suite: 19800
+};
+
+const MEAL_RATES = {
+  'No Meals': 0,
+  Breakfast: 1200,
+  'Half Board': 2800,
+  'Full Board': 4200
+};
+
+const EXTRAS_RATES = {
+  airportPickup: 4500,
+  privateGuide: 9000,
+  safariPass: 6500
+};
+
+const getTimelineStep = (status) => {
+  if (status === 'Pending') return 0;
+  if (status === 'Upcoming' || status === 'Accepted') return 1;
+  if (status === 'En Route') return 2;
+  if (status === 'Completed') return 3;
+  return 0;
+};
+
 export default function BookingsSection() {
-  const { bookings, loading, error, cancelBooking } = useTouristBookings();
-  const [openDropdownId, setOpenDropdownId] = useState(null);
-  const dropdownRef = useRef(null);
+  const { bookings, loading, error, cancelBooking, updateBooking, deleteBooking } = useTouristBookings();
+  const [activeStatusTab, setActiveStatusTab] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [message, setMessage] = useState('');
+  const [actionLoadingId, setActionLoadingId] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [manageForm, setManageForm] = useState({
+    pickupLocation: '',
+    dropoffLocation: '',
+    pickupTime: '',
+    checkInDate: '',
+    checkOutDate: '',
+    adults: 2,
+    children: 0,
+    roomType: 'Standard',
+    roomCount: 1,
+    mealPlan: 'No Meals',
+    dietPreference: '',
+    airportPickup: false,
+    privateGuide: false,
+    safariPass: false
+  });
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setOpenDropdownId(null);
-      }
+  const mappedBookings = useMemo(() => {
+    return (Array.isArray(bookings) ? bookings : []).map((booking) => {
+      const isTour = booking.bookingType === 'Tour' || Boolean(booking.tourPackage);
+      const status = normalizeStatus(booking.status);
+      return {
+        ...booking,
+        isTour,
+        status,
+        statusBucket: deriveStatusBucket(status),
+        displayId: `#BK-${String(booking._id || '').slice(-4).toUpperCase()}`,
+        typeLabel: isTour ? 'Tour' : 'Taxi',
+        destination: isTour
+          ? booking.packageOptions?.tourTitle || booking.tourPackage?.title || booking.dropoffLocation || booking.pickupLocation || 'Tour Booking'
+          : `${booking.pickupLocation || '-'} -> ${booking.dropoffLocation || '-'}`,
+        driverName: booking.assignedDriver?.name || 'Unassigned',
+        driverPhone: booking.assignedDriver?.phone || '',
+        packageOptions: booking.packageOptions || {},
+        paymentStatus: booking.paymentStatus || 'Pending',
+        dateLabel: formatBookingDate(booking.pickupTime),
+        amountLabel: formatCurrency(booking.totalPrice)
+      };
+    });
+  }, [bookings]);
+
+  const displayBookings = useMemo(() => {
+    const byStatus = activeStatusTab === 'all'
+      ? mappedBookings
+      : mappedBookings.filter((b) => b.statusBucket === activeStatusTab);
+
+    if (activeFilter === 'all') return byStatus;
+    if (activeFilter === 'tour') return byStatus.filter((b) => b.isTour);
+    return byStatus.filter((b) => !b.isTour);
+  }, [activeFilter, activeStatusTab, mappedBookings]);
+
+  const stats = useMemo(() => {
+    const initial = { upcoming: 0, completed: 0, pending: 0, cancelled: 0 };
+    mappedBookings.forEach((booking) => {
+      if (booking.status === 'Completed') initial.completed += 1;
+      else if (booking.status === 'Cancelled') initial.cancelled += 1;
+      else if (booking.status === 'Pending') initial.pending += 1;
+      else initial.upcoming += 1;
+    });
+    return initial;
+  }, [mappedBookings]);
+
+  const handleCancel = async (bookingId) => {
+    setMessage('');
+    setActionLoadingId(bookingId);
+    try {
+      await cancelBooking(bookingId);
+      setMessage('Booking cancelled successfully.');
+    } catch (err) {
+      setMessage(err.message || 'Failed to cancel booking.');
+    } finally {
+      setActionLoadingId('');
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  };
 
-  // Prefer actual API bookings, fallback to MOCK_BOOKINGS
-  // In a real app we structure actual API returns differently, mapping may be needed.
-  const displayBookings = bookings && bookings.length > 0 ? bookings : MOCK_BOOKINGS;
+  const handleDelete = async (bookingId) => {
+    if (!window.confirm('Delete this booking permanently?')) return;
+    setMessage('');
+    setActionLoadingId(bookingId);
+    try {
+      await deleteBooking(bookingId);
+      setMessage('Booking deleted successfully.');
+      if (selectedBooking && selectedBooking._id === bookingId) {
+        setSelectedBooking(null);
+      }
+    } catch (err) {
+      setMessage(err.message || 'Failed to delete booking.');
+    } finally {
+      setActionLoadingId('');
+    }
+  };
+
+  const handleQuickEdit = async (booking) => {
+    const options = booking.packageOptions || {};
+    setSelectedBooking(booking);
+    setManageForm({
+      pickupLocation: booking.pickupLocation || '',
+      dropoffLocation: booking.dropoffLocation || '',
+      pickupTime: booking.pickupTime ? new Date(booking.pickupTime).toISOString().slice(0, 16) : '',
+      checkInDate: options.checkInDate ? new Date(options.checkInDate).toISOString().slice(0, 10) : '',
+      checkOutDate: options.checkOutDate ? new Date(options.checkOutDate).toISOString().slice(0, 10) : '',
+      adults: Number(options.adults || 2),
+      children: Number(options.children || 0),
+      roomType: options.roomType || 'Standard',
+      roomCount: Number(options.roomCount || 1),
+      mealPlan: options.mealPlan || 'No Meals',
+      dietPreference: options.dietPreference || '',
+      airportPickup: Boolean(options.extras?.airportPickup),
+      privateGuide: Boolean(options.extras?.privateGuide),
+      safariPass: Array.isArray(options.extras?.activityAddons) && options.extras.activityAddons.includes('Safari Pass')
+    });
+  };
+
+  const isCutoffReached = (booking) => {
+    const pickupAt = booking?.pickupTime ? new Date(booking.pickupTime).getTime() : 0;
+    if (!pickupAt) return false;
+    return (pickupAt - Date.now()) <= (24 * 60 * 60 * 1000);
+  };
+
+  const getNights = (start, end) => {
+    if (!start || !end) return 1;
+    const startAt = new Date(start).getTime();
+    const endAt = new Date(end).getTime();
+    const diff = Math.ceil((endAt - startAt) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 1;
+  };
+
+  const getManagePricing = () => {
+    if (!selectedBooking?.isTour) return { final: selectedBooking?.totalPrice || 0 };
+    const nights = getNights(manageForm.checkInDate, manageForm.checkOutDate);
+    const guests = Number(manageForm.adults || 0) + Number(manageForm.children || 0);
+    const roomCost = (ROOM_RATES[manageForm.roomType] || ROOM_RATES.Standard) * nights * Number(manageForm.roomCount || 1);
+    const mealCost = (MEAL_RATES[manageForm.mealPlan] || 0) * nights * Math.max(1, guests);
+    const extrasCost =
+      (manageForm.airportPickup ? EXTRAS_RATES.airportPickup : 0) +
+      (manageForm.privateGuide ? EXTRAS_RATES.privateGuide : 0) +
+      (manageForm.safariPass ? EXTRAS_RATES.safariPass : 0);
+    const tourBase = Number(selectedBooking.packageOptions?.pricing?.tourBase || selectedBooking.totalPrice || 0);
+    return {
+      nights,
+      guests,
+      tourBase,
+      roomCost,
+      mealCost,
+      extrasCost,
+      final: tourBase + roomCost + mealCost + extrasCost
+    };
+  };
+
+  const handleSaveManage = async (e) => {
+    e.preventDefault();
+    if (!selectedBooking?._id) return;
+    const locked = isCutoffReached(selectedBooking);
+    if (locked) {
+      setMessage('Editing is locked within 24 hours of pickup. Please contact support.');
+      return;
+    }
+    setMessage('');
+    setActionLoadingId(selectedBooking._id);
+    const pricing = getManagePricing();
+    try {
+      await updateBooking(selectedBooking._id, {
+        pickupLocation: manageForm.pickupLocation.trim(),
+        dropoffLocation: manageForm.dropoffLocation.trim(),
+        pickupTime: manageForm.pickupTime,
+        totalPrice: pricing.final,
+        packageOptions: selectedBooking.isTour
+          ? {
+            tourTitle: selectedBooking.destination,
+            checkInDate: manageForm.checkInDate,
+            checkOutDate: manageForm.checkOutDate,
+            adults: Number(manageForm.adults || 1),
+            children: Number(manageForm.children || 0),
+            nights: pricing.nights || 1,
+            roomType: manageForm.roomType,
+            roomCount: Number(manageForm.roomCount || 1),
+            mealPlan: manageForm.mealPlan,
+            dietPreference: manageForm.dietPreference,
+            extras: {
+              airportPickup: manageForm.airportPickup,
+              privateGuide: manageForm.privateGuide,
+              activityAddons: manageForm.safariPass ? ['Safari Pass'] : []
+            },
+            pricing: {
+              tourBase: pricing.tourBase || 0,
+              roomCost: pricing.roomCost || 0,
+              mealCost: pricing.mealCost || 0,
+              extrasCost: pricing.extrasCost || 0,
+              finalTotal: pricing.final || 0
+            }
+          }
+          : undefined
+      });
+      setMessage('Booking updated successfully.');
+      setSelectedBooking(null);
+    } catch (err) {
+      setMessage(err.message || 'Failed to update booking.');
+    } finally {
+      setActionLoadingId('');
+    }
+  };
+
+  const canMutate = (status) => status !== 'Cancelled' && status !== 'Completed';
 
   return (
     <div className="space-y-6 font-sans animate-fade-in-up pb-10">
-      
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {[
-          { label: 'Upcoming', value: '2', color: 'blue', icon: MdCalendarToday },
-          { label: 'Completed', value: '8', color: 'emerald', icon: MdCheckCircle },
-          { label: 'Pending', value: '1', color: 'amber', icon: MdHourglassEmpty },
-          { label: 'Cancelled', value: '1', color: 'rose', icon: MdCancel },
+          { label: 'Upcoming', value: String(stats.upcoming), icon: MdCalendarToday, iconClass: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+          { label: 'Completed', value: String(stats.completed), icon: MdCheckCircle, iconClass: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+          { label: 'Pending', value: String(stats.pending), icon: MdHourglassEmpty, iconClass: 'bg-amber-50 text-amber-600 border-amber-200' },
+          { label: 'Cancelled', value: String(stats.cancelled), icon: MdCancel, iconClass: 'bg-rose-50 text-rose-600 border-rose-200' },
         ].map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="relative bg-white rounded-[1.5rem] border border-stone-200 p-6 flex flex-col justify-between overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
-              <div className={`absolute -right-6 -top-6 w-24 h-24 bg-${stat.color}-500/5 blur-[20px] rounded-full pointer-events-none group-hover:bg-${stat.color}-500/10 transition-colors duration-500`} />
-              
+            <div key={stat.label} className="relative bg-white rounded-[1.5rem] border border-cyan-100 p-6 flex flex-col justify-between overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4 relative z-10">
-                <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center border border-${stat.color}-200`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.iconClass}`}>
                   <Icon className="text-xl" />
                 </div>
                 <p className={`text-3xl font-black text-zinc-900`}>{stat.value}</p>
@@ -72,153 +346,232 @@ export default function BookingsSection() {
         })}
       </div>
 
-      {/* Bookings Table / List */}
-      <div className="bg-white rounded-[2rem] border border-stone-200 overflow-hidden shadow-sm">
-        <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-          <h3 className="font-bold text-xl text-zinc-900 tracking-tight">Booking History</h3>
-          <div className="flex bg-stone-100 rounded-xl p-1 border border-stone-200">
-            <button className="px-4 py-1.5 rounded-lg bg-white text-zinc-900 text-xs font-bold shadow-sm border border-stone-200">All</button>
-            <button className="px-4 py-1.5 rounded-lg text-stone-500 hover:text-zinc-900 text-xs font-bold transition-colors">Tours</button>
-            <button className="px-4 py-1.5 rounded-lg text-stone-500 hover:text-zinc-900 text-xs font-bold transition-colors">Taxises</button>
+      <div className="bg-white rounded-[2rem] border border-cyan-100 overflow-hidden shadow-sm">
+        <div className="px-6 py-5 border-b border-cyan-100 bg-cyan-50/40 space-y-4">
+          <h3 className="font-bold text-xl text-zinc-900 tracking-tight">My Reservations</h3>
+
+          <div className="flex flex-wrap gap-2">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveStatusTab(tab.key)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors border ${
+                  activeStatusTab === tab.key
+                    ? 'bg-cyan-700 text-white border-cyan-700'
+                    : 'bg-white text-cyan-700 border-cyan-200 hover:bg-cyan-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex bg-cyan-100/60 rounded-xl p-1 border border-cyan-200 w-fit">
+            {FILTERS.map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setActiveFilter(filter.key)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  activeFilter === filter.key
+                    ? 'bg-white text-cyan-900 shadow-sm border border-cyan-200'
+                    : 'text-cyan-700 hover:text-cyan-900'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs font-black text-stone-400 uppercase tracking-widest border-b border-stone-100 bg-stone-50/30">
-                <th className="px-6 py-4 whitespace-nowrap">ID</th>
-                <th className="px-6 py-4 whitespace-nowrap">Type & Dest.</th>
-                <th className="px-6 py-4 whitespace-nowrap">Driver</th>
-                <th className="px-6 py-4 whitespace-nowrap">Date</th>
-                <th className="px-6 py-4 whitespace-nowrap">Amount</th>
-                <th className="px-6 py-4 whitespace-nowrap">Status</th>
-                <th className="px-6 py-4 text-center whitespace-nowrap">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {loading && <tr><td colSpan="7" className="text-center py-4">Loading bookings...</td></tr>}
-              {error && <tr><td colSpan="7" className="text-center py-4 text-red-500">{error}</td></tr>}
-              {!loading && !error && displayBookings.map((booking) => {
-                const statusStr = booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Pending';
-                const StatusIcon = STATUS_ICON[statusStr] || STATUS_ICON['Pending'];
-                const isTour = booking.type === 'Tour' || booking.tour;
-                
-                const dispId = booking._id ? `#BK-${booking._id.substring(booking._id.length - 4)}` : booking.id;
-                const dest = booking.tour?.title || booking.destination || 'N/A';
-                const typeLabel = isTour ? 'Tour' : 'Taxi';
-                const driverName = booking.driver?.name || booking.driver || 'Unassigned';
-                const dateRaw = booking.date || new Date().toISOString();
-                const formattedDate = booking.id ? booking.date : new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                const amountDisp = booking.amount || 'LKR -';
+        {message && (
+          <div className="px-6 py-3 text-sm font-semibold text-cyan-700 bg-cyan-50 border-b border-cyan-100">
+            {message}
+          </div>
+        )}
 
-                return (
-                  <tr key={booking._id || booking.id} className="hover:bg-stone-50/80 transition-colors group">
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="font-mono text-xs font-bold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-md">
-                        {dispId}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isTour ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
-                          {isTour ? <MdTour className="text-lg" /> : <MdDirectionsCar className="text-lg" />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-stone-800 group-hover:text-emerald-600 transition-colors">{dest}</p>
-                          <p className="text-xs font-medium text-stone-500">{typeLabel}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {driverName !== 'Unassigned' ? (
-                          <>
-                            <img src={`https://ui-avatars.com/api/?name=${driverName}&background=random`} alt="Driver" className="w-6 h-6 rounded-full" />
-                            <span className="font-medium text-stone-700">{driverName}</span>
-                          </>
-                        ) : (
-                          <span className="text-sm font-medium text-stone-400 italic">Unassigned</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap font-medium text-stone-500">
-                      {formattedDate}
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="font-black text-zinc-900 border-b-2 border-transparent group-hover:border-emerald-200 pb-0.5 transition-colors">
-                        {amountDisp}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className={`text-xs px-3.5 py-1.5 rounded-lg font-bold tracking-wide flex items-center gap-1.5 w-fit ${STATUS_BADGE[statusStr] || STATUS_BADGE['Pending']}`}>
+        <div className="p-5 space-y-4">
+          {loading && <p className="text-center py-4 text-cyan-800/80">Loading bookings...</p>}
+          {error && <p className="text-center py-4 text-red-500">{error}</p>}
+          {!loading && !error && displayBookings.length === 0 && (
+            <p className="text-center py-6 text-cyan-800/80">No bookings found.</p>
+          )}
+
+          {!loading && !error && displayBookings.map((booking) => {
+            const StatusIcon = STATUS_ICON[booking.status] || STATUS_ICON.Pending;
+            const timelineStep = getTimelineStep(booking.status);
+
+            return (
+              <div key={booking._id} className="rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm">
+                <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-cyan-800 bg-cyan-100 px-2.5 py-1 rounded-md">{booking.displayId}</span>
+                      <span className={`text-xs px-3 py-1.5 rounded-lg font-bold tracking-wide flex items-center gap-1.5 w-fit ${STATUS_BADGE[booking.status] || STATUS_BADGE.Pending}`}>
                         <StatusIcon className="text-sm" />
-                        {statusStr}
+                        {booking.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap text-right">
-                      <div className="flex justify-end items-center relative">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const currentId = booking._id || booking.id;
-                            if (openDropdownId === currentId) {
-                              setOpenDropdownId(null);
-                            } else {
-                              setOpenDropdownId(currentId);
-                            }
-                          }}
-                          className="text-stone-400 hover:text-zinc-900 p-2 rounded-xl hover:bg-stone-100 transition-colors"
-                        >
-                          <MdMoreVert className="text-xl" />
-                        </button>
+                      <span className="text-xs px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-semibold">Payment: {booking.paymentStatus}</span>
+                    </div>
 
-                        {/* Dropdown Menu */}
-                        {openDropdownId === (booking._id || booking.id) && (
-                          <div 
-                            ref={dropdownRef}
-                            className="absolute right-0 top-full mt-1 w-48 bg-white border border-stone-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] py-2 z-50 flex flex-col text-left overflow-hidden ring-1 ring-black/5 animate-fade-in-up"
-                            style={{ animationDuration: '0.2s' }}
-                          >
-                            <button 
-                              onClick={() => { alert('Modify Booking logic coming soon!'); setOpenDropdownId(null); }}
-                              className="w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-colors"
-                            >
-                              <MdEdit className="text-lg" /> Modify Booking
-                            </button>
-                            
-                            <button 
-                              onClick={() => { alert('Contact support logic mapping...'); setOpenDropdownId(null); }}
-                              className="w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
-                            >
-                              <MdSupportAgent className="text-lg" /> Contact Support
-                            </button>
-
-                            {(statusStr !== 'Cancelled' && statusStr !== 'Completed' && booking._id) && (
-                              <>
-                                <div className="h-px bg-stone-100 my-1 w-full relative left-0"></div>
-                                <button 
-                                  onClick={() => {
-                                    cancelBooking(booking._id);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="w-full px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
-                                >
-                                  <MdCancel className="text-lg" /> Cancel Booking
-                                </button>
-                              </>
-                            )}
-                          </div>
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center ${booking.isTour ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'}`}>
+                        {booking.isTour ? <MdTour className="text-lg" /> : <MdDirectionsCar className="text-lg" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-stone-800">{booking.destination}</p>
+                        <p className="text-xs font-medium text-stone-500">{booking.typeLabel} reservation</p>
+                        <p className="text-xs text-stone-600 mt-1"><MdCalendarToday className="inline mr-1" />{booking.dateLabel}</p>
+                        <p className="text-xs text-stone-600 mt-1"><MdLocationOn className="inline mr-1" />Pickup: {booking.pickupLocation || '-'}</p>
+                        <p className="text-xs text-stone-600 mt-1"><MdGroup className="inline mr-1" />Guests: {(booking.packageOptions.adults || 1) + (booking.packageOptions.children || 0)}</p>
+                        {booking.isTour && (
+                          <>
+                            <p className="text-xs text-stone-600 mt-1">Room: {booking.packageOptions.roomType || 'Standard'} x {booking.packageOptions.roomCount || 1}</p>
+                            <p className="text-xs text-stone-600 mt-1">Meal Plan: {booking.packageOptions.mealPlan || 'No Meals'}</p>
+                          </>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-start lg:items-end gap-2">
+                    <p className="text-xl font-black text-zinc-900">{booking.amountLabel}</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleQuickEdit(booking)}
+                        disabled={actionLoadingId === booking._id}
+                        className="px-3 py-2 rounded-lg border border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-60 text-xs font-bold"
+                      >
+                        Manage Booking
+                      </button>
+                      <button
+                        onClick={() => { window.location.href = '/dashboard/tourist/support'; }}
+                        className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 bg-slate-50 hover:bg-slate-100 text-xs font-bold flex items-center gap-1"
+                      >
+                        <MdSupportAgent className="text-base" /> Support
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">Free cancellation before 24h of pickup{isCutoffReached(booking) ? ' (locked now)' : ''}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-cyan-100">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {BOOKING_TIMELINE.map((label, idx) => (
+                      <div key={label} className="flex items-center gap-2">
+                        <span className={`w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center ${idx <= timelineStep ? 'bg-cyan-700 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {idx + 1}
+                        </span>
+                        <span className={`text-xs font-semibold ${idx <= timelineStep ? 'text-cyan-800' : 'text-slate-500'}`}>{label}</span>
+                        {idx < BOOKING_TIMELINE.length - 1 && <span className="w-5 h-px bg-slate-200" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
+
+      {selectedBooking && (
+        <div className="fixed inset-0 z-40 flex items-start justify-center bg-zinc-950/45 px-4 pt-16 sm:pt-20 overflow-y-auto" onClick={() => setSelectedBooking(null)}>
+          <div className="w-full max-w-2xl rounded-3xl border border-cyan-100 bg-white p-6 shadow-[0_30px_60px_-30px_rgba(8,145,178,0.55)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-xl font-bold text-cyan-950">Manage Booking {selectedBooking.displayId}</h4>
+                <p className="text-sm text-cyan-700/80 mt-1">Edit booking details, cancel, or remove this reservation.</p>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="p-2 rounded-xl border border-cyan-200 text-cyan-700 hover:bg-cyan-50">
+                <MdClose className="text-lg" />
+              </button>
+            </div>
+
+            <form className="mt-5 space-y-4" onSubmit={handleSaveManage}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  value={manageForm.pickupLocation}
+                  onChange={(e) => setManageForm((prev) => ({ ...prev, pickupLocation: e.target.value }))}
+                  placeholder="Pickup location"
+                  className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                  disabled={isCutoffReached(selectedBooking)}
+                  required
+                />
+                <input
+                  value={manageForm.dropoffLocation}
+                  onChange={(e) => setManageForm((prev) => ({ ...prev, dropoffLocation: e.target.value }))}
+                  placeholder="Dropoff location"
+                  className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                  disabled={isCutoffReached(selectedBooking)}
+                />
+                <input
+                  type="datetime-local"
+                  value={manageForm.pickupTime}
+                  onChange={(e) => setManageForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+                  className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                  disabled={isCutoffReached(selectedBooking)}
+                  required
+                />
+                <div className="px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 text-sm flex items-center gap-2">
+                  <MdReceiptLong className="text-base" />
+                  Voucher/Invoice download: coming soon
+                </div>
+              </div>
+
+              {selectedBooking.isTour && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input type="date" value={manageForm.checkInDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkInDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <input type="date" value={manageForm.checkOutDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <input type="number" min="1" value={manageForm.adults} onChange={(e) => setManageForm((prev) => ({ ...prev, adults: Number(e.target.value || 1) }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <input type="number" min="0" value={manageForm.children} onChange={(e) => setManageForm((prev) => ({ ...prev, children: Number(e.target.value || 0) }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <select value={manageForm.roomType} onChange={(e) => setManageForm((prev) => ({ ...prev, roomType: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)}>
+                    {Object.keys(ROOM_RATES).map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <input type="number" min="1" value={manageForm.roomCount} onChange={(e) => setManageForm((prev) => ({ ...prev, roomCount: Number(e.target.value || 1) }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <select value={manageForm.mealPlan} onChange={(e) => setManageForm((prev) => ({ ...prev, mealPlan: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)}>
+                    {Object.keys(MEAL_RATES).map((plan) => <option key={plan} value={plan}>{plan}</option>)}
+                  </select>
+                  <input value={manageForm.dietPreference} onChange={(e) => setManageForm((prev) => ({ ...prev, dietPreference: e.target.value }))} placeholder="Diet preference" className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-2"><input type="checkbox" checked={manageForm.airportPickup} onChange={(e) => setManageForm((prev) => ({ ...prev, airportPickup: e.target.checked }))} disabled={isCutoffReached(selectedBooking)} />Airport Pickup</label>
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-2"><input type="checkbox" checked={manageForm.privateGuide} onChange={(e) => setManageForm((prev) => ({ ...prev, privateGuide: e.target.checked }))} disabled={isCutoffReached(selectedBooking)} />Private Guide</label>
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-2"><input type="checkbox" checked={manageForm.safariPass} onChange={(e) => setManageForm((prev) => ({ ...prev, safariPass: e.target.checked }))} disabled={isCutoffReached(selectedBooking)} />Safari Add-on</label>
+                  <div className="md:col-span-2 text-sm font-bold text-cyan-800">Updated total: {formatCurrency(getManagePricing().final)}</div>
+                </div>
+              )}
+
+              <div className="rounded-xl border border-cyan-100 bg-cyan-50/50 p-3 text-sm text-slate-700">
+                Cancellation policy: free cancellation until 24 hours before pickup. Refunds are processed within 3-5 business days.
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {canMutate(selectedBooking.status) && (
+                    <button type="button" onClick={() => handleCancel(selectedBooking._id)} className="px-3 py-2 rounded-lg border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 text-xs font-bold flex items-center gap-1">
+                      <MdCancel className="text-base" /> Cancel Reservation
+                    </button>
+                  )}
+                  <button type="button" onClick={() => handleDelete(selectedBooking._id)} className="px-3 py-2 rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 text-xs font-bold flex items-center gap-1">
+                    <MdDelete className="text-base" /> Delete
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {selectedBooking.driverPhone && (
+                    <a href={`tel:${selectedBooking.driverPhone}`} className="px-3 py-2 rounded-lg border border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 text-xs font-bold flex items-center gap-1">
+                      <MdPhone className="text-base" /> Contact Driver
+                    </a>
+                  )}
+                  <button type="submit" disabled={actionLoadingId === selectedBooking._id || isCutoffReached(selectedBooking)} className="px-4 py-2 rounded-lg bg-cyan-700 text-white hover:bg-cyan-800 disabled:opacity-60 text-xs font-bold flex items-center gap-1">
+                    <MdEdit className="text-base" /> {actionLoadingId === selectedBooking._id ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+              {isCutoffReached(selectedBooking) && (
+                <p className="text-xs font-semibold text-amber-700">Editing is disabled within 24 hours of pickup. Please contact support for urgent changes.</p>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
