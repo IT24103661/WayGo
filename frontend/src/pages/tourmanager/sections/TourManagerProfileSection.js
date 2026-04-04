@@ -115,22 +115,22 @@ export default function TourManagerProfileSection() {
   };
 
   if (loading) {
-    return <div className="text-emerald-700">Loading profile...</div>;
+    return <div className="text-cyan-700">Loading profile...</div>;
   }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <p className="text-xs font-semibold tracking-[0.3em] text-emerald-700 uppercase">My Account</p>
-        <h2 className="text-2xl font-bold text-emerald-950">Manager Profile</h2>
-        <p className="text-emerald-700/80">Manage your personal information and contact details.</p>
+        <p className="text-xs font-semibold tracking-[0.3em] text-cyan-700 uppercase">My Account</p>
+        <h2 className="text-2xl font-bold text-cyan-950">Manager Profile</h2>
+        <p className="text-cyan-700/80">Manage your personal information and contact details.</p>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.35)] overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.35)] overflow-hidden">
         
-        <div className="h-32 bg-gradient-to-r from-emerald-600 to-teal-500 relative">
+        <div className="h-32 bg-gradient-to-r from-cyan-600 to-sky-500 relative">
            <div className="absolute -bottom-12 left-8">
-              <div className="w-24 h-24 bg-white rounded-2xl shadow-xl flex items-center justify-center text-4xl font-bold text-emerald-700 border-4 border-white">
+              <div className="w-24 h-24 bg-white rounded-2xl shadow-xl flex items-center justify-center text-4xl font-bold text-cyan-700 border-4 border-white">
                 {profile?.name?.charAt(0).toUpperCase() || 'M'}
               </div>
            </div>
@@ -141,7 +141,7 @@ export default function TourManagerProfileSection() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-emerald-900 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-cyan-900 mb-2 flex items-center gap-2">
                   <MdPerson /> Full Name
                 </label>
                 <input
@@ -152,12 +152,12 @@ export default function TourManagerProfileSection() {
                   required
                   pattern="^[a-zA-Z\s]{3,50}$"
                   title="Name must be between 3 and 50 characters, letters only."
-                  className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30"
+                  className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-cyan-50/30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-emerald-900 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-cyan-900 mb-2 flex items-center gap-2">
                   <MdPhone /> Phone Number
                 </label>
                 <input
@@ -168,12 +168,12 @@ export default function TourManagerProfileSection() {
                   required
                   pattern="^\+?[0-9]{9,15}$"
                   title="Phone must be a valid number (e.g., +94771234567 or 0771234567)"
-                  className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30"
+                  className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-cyan-50/30"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-emerald-900 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-cyan-900 mb-2 flex items-center gap-2">
                   <MdEmail /> Email Address
                 </label>
                 <input
@@ -182,22 +182,22 @@ export default function TourManagerProfileSection() {
                   value={form.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30"
+                  className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-cyan-50/30"
                 />
               </div>
             </div>
 
             {message.text && (
-              <div className={`p-4 rounded-2xl text-sm font-semibold ${message.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+              <div className={`p-4 rounded-2xl text-sm font-semibold ${message.type === 'success' ? 'bg-cyan-100 text-cyan-800' : 'bg-red-100 text-red-800'}`}>
                 {message.text}
               </div>
             )}
 
-            <div className="flex items-center gap-4 pt-4 border-t border-emerald-50">
+            <div className="flex items-center gap-4 pt-4 border-t border-cyan-50">
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-600 text-white font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60"
               >
                 <MdSave className="text-xl" />
                 {saving ? 'Saving...' : 'Update Profile'}

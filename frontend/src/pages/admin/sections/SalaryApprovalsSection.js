@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { MdPayments } from 'react-icons/md';
 import { adminAPI } from '../../../services/adminAPI';
 
@@ -9,7 +9,7 @@ export default function SalaryApprovalsSection() {
   const [message, setMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState('Pending');
 
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       const result = await adminAPI.getSalaryApprovals(statusFilter === 'All' ? '' : statusFilter);
@@ -20,11 +20,11 @@ export default function SalaryApprovalsSection() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchRows();
-  }, [statusFilter]);
+  }, [fetchRows]);
 
   const markPaid = async (item) => {
     setMessage('');

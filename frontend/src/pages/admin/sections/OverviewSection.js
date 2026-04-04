@@ -64,7 +64,6 @@ function slicePath(cx, cy, r, startDeg, endDeg) {
 
 function PieChart() {
   const taxiPct = 62;
-  const tourPct = 38;
   const taxiDeg = (taxiPct / 100) * 360;
   return (
     <svg viewBox="0 0 180 180" className="w-44 h-44 drop-shadow-sm">

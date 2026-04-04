@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { touristAPI } from '../services/touristAPI';
 
 /**
@@ -17,7 +17,7 @@ export const useTouristBookings = () => {
     });
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       const data = await touristAPI.getBookings();
@@ -28,7 +28,7 @@ export const useTouristBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const createBooking = async (bookingData) => {
     try {
@@ -93,7 +93,7 @@ export const useTouristBookings = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
 
   return {
     bookings,
