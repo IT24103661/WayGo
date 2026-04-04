@@ -26,6 +26,15 @@ const STATUS_BADGE = {
   'Cancelled': 'bg-rose-50 text-rose-600 border border-rose-200 shadow-sm',
 };
 
+const STAY_BADGE = {
+  'Awaiting Stay Allocation': 'bg-amber-50 text-amber-700 border border-amber-200',
+  'Partially Allocated': 'bg-sky-50 text-sky-700 border border-sky-200',
+  'Stay Confirmed': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  'Check-in Ready': 'bg-cyan-50 text-cyan-700 border border-cyan-200',
+  'Checked-in': 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+  'Checked-out': 'bg-slate-100 text-slate-700 border border-slate-200'
+};
+
 const STATUS_ICON = {
   'Upcoming': MdHourglassEmpty,
   'Completed': MdCheckCircle,
@@ -150,6 +159,8 @@ export default function BookingsSection() {
         driverName: booking.assignedDriver?.name || 'Unassigned',
         driverPhone: booking.assignedDriver?.phone || '',
         packageOptions: booking.packageOptions || {},
+        stayStatus: booking.stayStatus || 'Awaiting Stay Allocation',
+        stayAllocations: Array.isArray(booking.stayAllocations) ? booking.stayAllocations : [],
         paymentStatus: booking.paymentStatus || 'Pending',
         dateLabel: formatBookingDate(booking.pickupTime),
         amountLabel: formatCurrency(booking.totalPrice)
@@ -427,6 +438,18 @@ export default function BookingsSection() {
                           <>
                             <p className="text-xs text-stone-600 mt-1">Room: {booking.packageOptions.roomType || 'Standard'} x {booking.packageOptions.roomCount || 1}</p>
                             <p className="text-xs text-stone-600 mt-1">Meal Plan: {booking.packageOptions.mealPlan || 'No Meals'}</p>
+                            <p className={`inline-flex mt-2 text-xs px-2.5 py-1 rounded-md font-semibold ${STAY_BADGE[booking.stayStatus] || STAY_BADGE['Awaiting Stay Allocation']}`}>
+                              Stay: {booking.stayStatus}
+                            </p>
+                            {booking.stayAllocations.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {booking.stayAllocations.map((allocation, index) => (
+                                  <p key={`${booking._id}-stay-${index}`} className="text-xs text-stone-600">
+                                    Stay: {allocation.propertyName} ({allocation.roomType}) • {allocation.roomsAllocated} room(s)
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </>
                         )}
                       </div>

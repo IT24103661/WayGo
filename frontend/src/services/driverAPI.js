@@ -5,10 +5,12 @@ const API_URL = 'http://localhost:5001/api/driver';
 
 // Utility to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('waygo_token') || localStorage.getItem('token');
   return {
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token && token !== 'null' && token !== 'undefined'
+        ? { Authorization: `Bearer ${token}` }
+        : {}),
     },
   };
 };

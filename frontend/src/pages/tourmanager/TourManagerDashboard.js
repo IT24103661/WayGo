@@ -3,11 +3,12 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import TourManagerSidebar from './TourManagerSidebar';
 import TourManagerTopBar from './TourManagerTopBar';
 import OverviewSection from './sections/OverviewSection';
-import CreatePackageSection from './sections/CreatePackageSection';
-import CustomQuotesSection from './sections/CustomQuotesSection';
 import ActiveToursMapSection from './sections/ActiveToursMapSection';
 import ManageToursSection from './sections/ManageToursSection';
 import TourManagerProfileSection from './sections/TourManagerProfileSection';
+import StayRequestsSection from './sections/StayRequestsSection';
+import StayInventorySection from './sections/StayInventorySection';
+import StayBoardSection from './sections/StayBoardSection';
 
 export default function TourManagerDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -16,9 +17,10 @@ export default function TourManagerDashboard() {
   const segment = location.pathname.split('/').filter(Boolean).pop();
   const PAGE_META = {
     overview: { title: 'Tour Manager Console', subtitle: 'Curate premium, multi-day journeys' },
-    packages: { title: 'Manage Packages', subtitle: 'Design signature experiences' },
     tours: { title: 'Manage Custom Tours', subtitle: 'Detailed standalone itineraries' },
-    quotes: { title: 'Pending Custom Quotes', subtitle: 'Review high-value requests' },
+    'stay-requests': { title: 'Stay Requests', subtitle: 'Allocate stays for incoming tour bookings' },
+    'stay-inventory': { title: 'Stay Inventory', subtitle: 'Track room stock and availability by property' },
+    'stay-board': { title: 'Stay Board', subtitle: 'Monitor stay readiness lifecycle at a glance' },
     map: { title: 'Active Tours Map', subtitle: 'Monitor premium tours in motion' },
     profile: { title: 'Manager Profile', subtitle: 'Account management and settings' },
   };
@@ -42,9 +44,10 @@ export default function TourManagerDashboard() {
             <Routes>
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<OverviewSection />} />
-              <Route path="packages" element={<CreatePackageSection />} />
               <Route path="tours" element={<ManageToursSection />} />
-              <Route path="quotes" element={<CustomQuotesSection />} />
+              <Route path="stay-requests" element={<StayRequestsSection />} />
+              <Route path="stay-inventory" element={<StayInventorySection />} />
+              <Route path="stay-board" element={<StayBoardSection />} />
               <Route path="map" element={<ActiveToursMapSection />} />
               <Route path="profile" element={<TourManagerProfileSection />} />
             </Routes>

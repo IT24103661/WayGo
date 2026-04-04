@@ -9,8 +9,7 @@ export default function CreatePackageSection() {
     description: '',
     flatPrice: '',
     durationDays: '',
-    itineraryStops: '',
-    vehicleType: ''
+    itineraryStops: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState('');
@@ -19,7 +18,7 @@ export default function CreatePackageSection() {
     let value = event.target.value;
 
     // Strict typing validations
-    if (field === 'title' || field === 'vehicleType') {
+    if (field === 'title') {
       // Allow only letters, numbers, and spaces (preventing weird symbols but keeping it title-friendly)
       value = value.replace(/[^a-zA-Z0-9\s]/g, '');
     } else if (field === 'flatPrice' || field === 'durationDays') {
@@ -37,8 +36,7 @@ export default function CreatePackageSection() {
       description: pkg.description,
       flatPrice: pkg.flatPrice,
       durationDays: pkg.durationDays,
-      itineraryStops: pkg.itineraryStops ? pkg.itineraryStops.join(' • ') : '',
-      vehicleType: pkg.vehicleType
+      itineraryStops: pkg.itineraryStops ? pkg.itineraryStops.join(' • ') : ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -63,8 +61,7 @@ export default function CreatePackageSection() {
         description: form.description,
         flatPrice: Number(form.flatPrice),
         durationDays: Number(form.durationDays),
-        itineraryStops: (form.itineraryStops || '').split('•').map((stop) => stop.trim()).filter(Boolean),
-        vehicleType: form.vehicleType
+        itineraryStops: (form.itineraryStops || '').split('•').map((stop) => stop.trim()).filter(Boolean)
       };
       
       if (editingId) {
@@ -81,8 +78,7 @@ export default function CreatePackageSection() {
         description: '',
         flatPrice: '',
         durationDays: '',
-        itineraryStops: '',
-        vehicleType: ''
+        itineraryStops: ''
       });
     } catch (error) {
       setMessage(error.message || 'Unable to save package.');
@@ -108,17 +104,6 @@ export default function CreatePackageSection() {
                 value={form.title}
                 onChange={handleChange('title')}
                 placeholder="Emerald Highlands Expedition"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Vehicle Type</label>
-              <input
-                type="text"
-                required
-                value={form.vehicleType}
-                onChange={handleChange('vehicleType')}
-                placeholder="Luxury SUV"
                 className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
               />
             </div>
@@ -188,7 +173,7 @@ export default function CreatePackageSection() {
                 onClick={() => {
                   setEditingId(null);
                   setForm({
-                    title: '', description: '', flatPrice: '', durationDays: '', itineraryStops: '', vehicleType: ''
+                    title: '', description: '', flatPrice: '', durationDays: '', itineraryStops: ''
                   });
                 }}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors"
@@ -215,11 +200,6 @@ export default function CreatePackageSection() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => { e.target.src = 'https://source.unsplash.com/600x400/?srilanka,adventure'; }}
                   />
-                  <div className="absolute top-3 left-3">
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md bg-emerald-900/80 text-emerald-100 uppercase tracking-widest">
-                      {pkg.vehicleType}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col">

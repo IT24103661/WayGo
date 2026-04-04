@@ -1,9 +1,18 @@
 const API_BASE = 'http://localhost:5001/api';
 
-const authHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-});
+const getToken = () => {
+  const token = localStorage.getItem('waygo_token') || localStorage.getItem('token');
+  if (!token || token === 'null' || token === 'undefined') return null;
+  return token;
+};
+
+const authHeaders = () => {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
 
 export const tourManagerAPI = {
   // --- PACKAGES ---
@@ -77,5 +86,51 @@ export const tourManagerAPI = {
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  // --- STAY OPERATIONS ---
+  getStayRequests: (status) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetch(`${API_BASE}/tourmanager/stay/requests${query}`, {
+      headers: authHeaders()
+    }).then(r => r.json());
+  },
+
+  allocateStay: (bookingId, payload) => fetch(`${API_BASE}/tourmanager/stay/bookings/${bookingId}/allocate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  updateStayStatus: (bookingId, payload) => fetch(`${API_BASE}/tourmanager/stay/bookings/${bookingId}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  deleteStayAllocation: (bookingId, allocationId) => fetch(`${API_BASE}/tourmanager/stay/bookings/${bookingId}/allocations/${allocationId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  getStayInventory: () => fetch(`${API_BASE}/tourmanager/stay/inventory`, {
+    headers: authHeaders()
+  }).then(r => r.json()),
+
+  createStayInventory: (payload) => fetch(`${API_BASE}/tourmanager/stay/inventory`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  updateStayInventory: (inventoryId, payload) => fetch(`${API_BASE}/tourmanager/stay/inventory/${inventoryId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  }).then(r => r.json()),
+
+  deleteStayInventory: (inventoryId) => fetch(`${API_BASE}/tourmanager/stay/inventory/${inventoryId}`, {
+    method: 'DELETE',
+    headers: authHeaders()
   }).then(r => r.json()),
 };

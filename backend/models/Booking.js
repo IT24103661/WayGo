@@ -131,6 +131,73 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Paid', 'Refunded'],
         default: 'Pending'
+    },
+    stayStatus: {
+        type: String,
+        enum: [
+            'Awaiting Stay Allocation',
+            'Partially Allocated',
+            'Stay Confirmed',
+            'Check-in Ready',
+            'Checked-in',
+            'Checked-out'
+        ],
+        default: 'Awaiting Stay Allocation'
+    },
+    stayAllocations: {
+        type: [
+            {
+                stayInventory: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'StayInventory',
+                    default: null
+                },
+                propertyName: {
+                    type: String,
+                    trim: true,
+                    required: true
+                },
+                location: {
+                    type: String,
+                    trim: true,
+                    required: true
+                },
+                roomType: {
+                    type: String,
+                    enum: ['Standard', 'Deluxe', 'Family', 'Suite'],
+                    required: true
+                },
+                roomsAllocated: {
+                    type: Number,
+                    min: 1,
+                    required: true
+                },
+                checkInDate: {
+                    type: Date,
+                    required: true
+                },
+                checkOutDate: {
+                    type: Date,
+                    required: true
+                },
+                notes: {
+                    type: String,
+                    trim: true,
+                    default: ''
+                }
+            }
+        ],
+        default: []
+    },
+    stayManagerNotes: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    stayLastUpdatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     }
 }, {
     timestamps: true
