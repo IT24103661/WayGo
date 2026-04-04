@@ -22,10 +22,11 @@ const tourPackageSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
-  vehicleType: {
-    type: String,
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    trim: true
+    index: true
   }
 }, { timestamps: true });
 

@@ -1,9 +1,18 @@
 const API_BASE = 'http://localhost:5001/api';
 
-const authHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-});
+const getToken = () => {
+  const token = localStorage.getItem('waygo_token') || localStorage.getItem('token');
+  if (!token || token === 'null' || token === 'undefined') return null;
+  return token;
+};
+
+const authHeaders = () => {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
 
 const parseJson = async (res) => {
   const text = await res.text();
@@ -86,6 +95,10 @@ export const touristAPI = {
     body: JSON.stringify(updatedData)
   }),
 
+  deleteBooking: (bookingId) => request(`/tourist/bookings/${bookingId}`, {
+    method: 'DELETE'
+  }),
+
   getTours: () => request('/tourist/tours'),
 
   getReviews: () => request('/tourist/reviews'),
@@ -120,8 +133,28 @@ export const touristAPI = {
     method: 'PATCH'
   }),
 
+  deleteNotification: (notificationId) => request(`/tourist/notifications/${notificationId}`, {
+    method: 'DELETE'
+  }),
+
   markAllNotificationsRead: () => request('/tourist/notifications/read-all', {
     method: 'PATCH'
+  }),
+
+  getSupportRequests: () => request('/tourist/support'),
+
+  createSupportRequest: (payload) => request('/tourist/support', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+
+  updateSupportRequest: (requestId, payload) => request(`/tourist/support/${requestId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
+
+  deleteSupportRequest: (requestId) => request(`/tourist/support/${requestId}`, {
+    method: 'DELETE'
   }),
 
   // Placeholder stubs for sections that are still UI-mock based.

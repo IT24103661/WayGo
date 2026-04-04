@@ -9,11 +9,19 @@ export const useTouristBookings = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const sortByNewest = (items = []) => {
+    return [...items].sort((a, b) => {
+      const aTime = new Date(a?.createdAt || 0).getTime();
+      const bTime = new Date(b?.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+  };
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
       const data = await touristAPI.getBookings();
-      setBookings(Array.isArray(data) ? data : []);
+      setBookings(sortByNewest(Array.isArray(data) ? data : []));
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -26,7 +34,7 @@ export const useTouristBookings = () => {
     try {
       setLoading(true);
       const newBooking = await touristAPI.createBooking(bookingData);
-      setBookings((prev) => [...prev, newBooking]);
+      setBookings((prev) => sortByNewest([newBooking, ...prev]));
       setError(null);
       return newBooking;
     } catch (err) {
@@ -40,7 +48,24 @@ export const useTouristBookings = () => {
   const cancelBooking = async (bookingId) => {
     try {
       setLoading(true);
-      await touristAPI.cancelBooking(bookingId);
+      const result = await touristAPI.cancelBooking(bookingId);
+      const cancelled = result?.booking || null;
+      setBookings((prev) => prev.map((b) => (b._id === bookingId
+        ? { ...b, ...(cancelled || {}), status: 'Cancelled' }
+        : b)));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteBooking = async (bookingId) => {
+    try {
+      setLoading(true);
+      await touristAPI.deleteBooking(bookingId);
       setBookings((prev) => prev.filter((b) => b._id !== bookingId));
       setError(null);
     } catch (err) {
@@ -49,7 +74,7 @@ export const useTouristBookings = () => {
     } finally {
       setLoading(false);
     }
-    };
+  };
 
   const updateBooking = async (bookingId, updatedData) => {
     try {
@@ -70,7 +95,16 @@ export const useTouristBookings = () => {
     fetchBookings();
   }, []);
 
-  return { bookings, loading, error, createBooking, cancelBooking, updateBooking, refetch: fetchBookings };
+  return {
+    bookings,
+    loading,
+    error,
+    createBooking,
+    cancelBooking,
+    deleteBooking,
+    updateBooking,
+    refetch: fetchBookings
+  };
 };
 
 export const useTouristFleetBookings = () => {
@@ -308,6 +342,16 @@ export const useTouristNotifications = () => {
     }
   };
 
+  const deleteNotification = async (notificationId) => {
+    try {
+      await touristAPI.deleteNotification(notificationId);
+      setNotifications((prev) => prev.filter((n) => n._id !== notificationId));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
 
@@ -316,7 +360,15 @@ export const useTouristNotifications = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return { notifications, loading, error, markAsRead, markAllAsRead, refetch: fetchNotifications };
+  return {
+    notifications,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refetch: fetchNotifications
+  };
 };
 
 /**
@@ -341,4 +393,84 @@ export const useContactDriver = () => {
   };
 
   return { sendMessage, loading, error };
+};
+
+/**
+ * Hook to manage tourist support tickets
+ */
+export const useTouristSupport = () => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const data = await touristAPI.getSupportRequests();
+      setRequests(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createRequest = async (payload) => {
+    try {
+      setLoading(true);
+      const created = await touristAPI.createSupportRequest(payload);
+      setRequests((prev) => [created, ...prev]);
+      setError(null);
+      return created;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateRequest = async (requestId, payload) => {
+    try {
+      setLoading(true);
+      const updated = await touristAPI.updateSupportRequest(requestId, payload);
+      setRequests((prev) => prev.map((item) => (item._id === requestId ? updated : item)));
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteRequest = async (requestId) => {
+    try {
+      setLoading(true);
+      await touristAPI.deleteSupportRequest(requestId);
+      setRequests((prev) => prev.filter((item) => item._id !== requestId));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  return {
+    requests,
+    loading,
+    error,
+    createRequest,
+    updateRequest,
+    deleteRequest,
+    refetch: fetchRequests
+  };
 };

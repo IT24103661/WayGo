@@ -51,6 +51,44 @@ const notifyFleetManagersForBooking = async ({ booking, touristId, message }) =>
   await FleetNotification.insertMany(notifications);
 };
 
+const sanitizePackageOptions = (packageOptions = {}) => {
+  const safeAdults = Number(packageOptions.adults);
+  const safeChildren = Number(packageOptions.children);
+  const safeNights = Number(packageOptions.nights);
+  const safeRoomCount = Number(packageOptions.roomCount);
+
+  return {
+    tourTitle: String(packageOptions.tourTitle || '').trim(),
+    checkInDate: packageOptions.checkInDate ? new Date(packageOptions.checkInDate) : null,
+    checkOutDate: packageOptions.checkOutDate ? new Date(packageOptions.checkOutDate) : null,
+    adults: Number.isFinite(safeAdults) && safeAdults > 0 ? safeAdults : 1,
+    children: Number.isFinite(safeChildren) && safeChildren >= 0 ? safeChildren : 0,
+    nights: Number.isFinite(safeNights) && safeNights > 0 ? safeNights : 1,
+    roomType: ['Standard', 'Deluxe', 'Family', 'Suite'].includes(packageOptions.roomType)
+      ? packageOptions.roomType
+      : 'Standard',
+    roomCount: Number.isFinite(safeRoomCount) && safeRoomCount > 0 ? safeRoomCount : 1,
+    mealPlan: ['No Meals', 'Breakfast', 'Half Board', 'Full Board'].includes(packageOptions.mealPlan)
+      ? packageOptions.mealPlan
+      : 'No Meals',
+    dietPreference: String(packageOptions.dietPreference || '').trim(),
+    extras: {
+      airportPickup: Boolean(packageOptions.extras?.airportPickup),
+      privateGuide: Boolean(packageOptions.extras?.privateGuide),
+      activityAddons: Array.isArray(packageOptions.extras?.activityAddons)
+        ? packageOptions.extras.activityAddons.map((item) => String(item || '').trim()).filter(Boolean)
+        : []
+    },
+    pricing: {
+      tourBase: Number(packageOptions.pricing?.tourBase) || 0,
+      roomCost: Number(packageOptions.pricing?.roomCost) || 0,
+      mealCost: Number(packageOptions.pricing?.mealCost) || 0,
+      extrasCost: Number(packageOptions.pricing?.extrasCost) || 0,
+      finalTotal: Number(packageOptions.pricing?.finalTotal) || 0
+    }
+  };
+};
+
 // ==========================================
 // 1. TOURIST PROFILE MANAGEMENT (CRUD)
 // ==========================================
@@ -150,7 +188,7 @@ exports.getAvailableTours = async (req, res) => {
 // @access  Private (Tourist only)
 exports.createBooking = async (req, res) => {
   try {
-    const { tourId, date, members = 1, pickupLocation, dropoffLocation, totalPrice } = req.body;
+    const { tourId, date, members = 1, pickupLocation, dropoffLocation, totalPrice, packageOptions } = req.body;
 
     if (!pickupLocation || !String(pickupLocation).trim()) {
       return res.status(400).json({ message: 'pickupLocation is required.' });
@@ -173,6 +211,11 @@ exports.createBooking = async (req, res) => {
       ? Number(tour.price) * safeMembers
       : (Number(totalPrice) > 0 ? Number(totalPrice) : 12500);
 
+    const sanitizedOptions = sanitizePackageOptions(packageOptions || {});
+    const finalPrice = sanitizedOptions.pricing.finalTotal > 0
+      ? sanitizedOptions.pricing.finalTotal
+      : calculatedPrice;
+
     const newBooking = await Booking.create({
       tourist: req.user.userId,
       bookingType: 'Tour',
@@ -180,7 +223,8 @@ exports.createBooking = async (req, res) => {
       pickupLocation: String(pickupLocation).trim(),
       dropoffLocation: dropoffLocation ? String(dropoffLocation).trim() : null,
       pickupTime,
-      totalPrice: calculatedPrice,
+      totalPrice: finalPrice,
+      packageOptions: sanitizedOptions,
       status: 'Pending'
     });
 
@@ -438,12 +482,37 @@ exports.markAllTouristNotificationsRead = async (req, res) => {
   }
 };
 
+// @desc    Delete tourist notification
+// @route   DELETE /api/tourist/notifications/:id
+// @access  Private (Tourist only)
+exports.deleteTouristNotification = async (req, res) => {
+  try {
+    const notification = await TouristNotification.findOneAndDelete({
+      _id: req.params.id,
+      tourist: req.user.userId
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Notification deleted successfully.'
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 // @desc    Get tourist's personal bookings (Read)
 // @route   GET /api/tourist/bookings
 // @access  Private (Tourist only)
 exports.getMyBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ tourist: req.user.userId }).populate('tourPackage');
+    const bookings = await Booking.find({ tourist: req.user.userId })
+      .populate('tourPackage')
+      .sort({ createdAt: -1 });
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
@@ -476,7 +545,7 @@ exports.cancelBooking = async (req, res) => {
 // @access  Private (Tourist only)
 exports.updateBooking = async (req, res) => {
   try {
-    const { pickupLocation, dropoffLocation, pickupTime } = req.body;
+    const { pickupLocation, dropoffLocation, pickupTime, totalPrice, packageOptions } = req.body;
     let booking = await Booking.findById(req.params.id);
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -492,6 +561,23 @@ exports.updateBooking = async (req, res) => {
     if (pickupLocation) booking.pickupLocation = pickupLocation;
     if (dropoffLocation !== undefined) booking.dropoffLocation = dropoffLocation;
     if (pickupTime) booking.pickupTime = pickupTime;
+    if (totalPrice !== undefined && Number(totalPrice) > 0) {
+      booking.totalPrice = Number(totalPrice);
+    }
+    if (packageOptions && typeof packageOptions === 'object') {
+      booking.packageOptions = sanitizePackageOptions({
+        ...(booking.packageOptions || {}),
+        ...packageOptions,
+        extras: {
+          ...((booking.packageOptions && booking.packageOptions.extras) || {}),
+          ...(packageOptions.extras || {})
+        },
+        pricing: {
+          ...((booking.packageOptions && booking.packageOptions.pricing) || {}),
+          ...(packageOptions.pricing || {})
+        }
+      });
+    }
 
     const updatedBooking = await booking.save();
     res.json(updatedBooking);

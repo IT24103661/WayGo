@@ -13,9 +13,15 @@ const {
   getTourPackages,
   updateTourPackage,
   deleteTourPackage,
-  getCustomQuotes,
-  reviewCustomQuote,
-  assignTourDriver
+  assignTourDriver,
+  getStayRequests,
+  allocateStayForBooking,
+  updateStayStatus,
+  deleteStayAllocation,
+  getStayInventory,
+  createStayInventory,
+  updateStayInventory,
+  deleteStayInventory
 } = require('../controllers/tourManagerController');
 
 // All routes require authentication
@@ -41,8 +47,16 @@ router.post('/packages', createTourPackage);
 router.put('/packages/:packageId', updateTourPackage);
 router.delete('/packages/:packageId', deleteTourPackage);
 
-router.get('/quotes', getCustomQuotes);
-router.patch('/quotes/:quoteId', reviewCustomQuote);
 router.patch('/tours/:bookingId/assign-driver', assignTourDriver);
+
+// Stay operations
+router.get('/stay/requests', getStayRequests);
+router.patch('/stay/bookings/:bookingId/allocate', allocateStayForBooking);
+router.patch('/stay/bookings/:bookingId/status', updateStayStatus);
+router.delete('/stay/bookings/:bookingId/allocations/:allocationId', deleteStayAllocation);
+router.get('/stay/inventory', getStayInventory);
+router.post('/stay/inventory', createStayInventory);
+router.put('/stay/inventory/:inventoryId', updateStayInventory);
+router.delete('/stay/inventory/:inventoryId', deleteStayInventory);
 
 module.exports = router;

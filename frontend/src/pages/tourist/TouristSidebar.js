@@ -111,29 +111,29 @@ export default function TouristSidebar({ open, onClose }) {
       <aside
         className={`
           fixed top-0 left-0 h-full w-72 z-30 flex flex-col font-sans
-          bg-gradient-to-b from-[#0b1f1f] via-[#0d2a26] to-[#081716]
-          border-r border-emerald-900/50 shadow-[0_30px_60px_-40px_rgba(13,148,136,0.6)]
+          bg-gradient-to-b from-[#0f4a61] via-[#13607a] to-[#0f4f66]
+          border-r border-cyan-300/45 shadow-[0_30px_80px_-50px_rgba(6,182,212,0.55)]
           transition-transform duration-300 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0 lg:static lg:z-auto
         `}
       >
         {/* Logo Section */}
-        <div className="flex items-center justify-between px-6 h-20 border-b border-emerald-900/50 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 h-20 border-b border-cyan-200/35 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-emerald-400 via-teal-300 to-amber-200 rounded-2xl flex items-center justify-center font-bold text-[#04201d] text-xl shadow-lg">
+            <div className="w-11 h-11 bg-gradient-to-br from-cyan-300 via-sky-200 to-teal-200 rounded-2xl flex items-center justify-center font-bold text-cyan-950 text-xl shadow-lg">
               W
             </div>
             <div>
               <p className="text-white font-bold text-lg leading-none tracking-tight">WayGo</p>
-              <p className="text-emerald-300 text-xs font-semibold mt-0.5 uppercase tracking-[0.2em]">
+              <p className="text-cyan-50 text-xs font-semibold mt-0.5 uppercase tracking-[0.2em]">
                 Tourist
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-emerald-200 hover:text-white hover:bg-emerald-900/40 rounded-lg transition-colors shrink-0"
+            className="lg:hidden p-2 text-cyan-50 hover:text-white hover:bg-cyan-800/50 rounded-lg transition-colors shrink-0"
           >
             <MdClose className="text-xl" />
           </button>
@@ -141,7 +141,7 @@ export default function TouristSidebar({ open, onClose }) {
 
         {/* Navigation Section */}
         <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
-          <div className="px-4 mb-4 text-[11px] font-semibold text-emerald-200/70 uppercase tracking-[0.3em]">
+          <div className="px-4 mb-4 text-[11px] font-semibold text-cyan-50 uppercase tracking-[0.3em]">
             Main Menu
           </div>
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
@@ -152,8 +152,8 @@ export default function TouristSidebar({ open, onClose }) {
               className={({ isActive }) =>
                 `flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-300 group
                  ${isActive
-                   ? 'bg-emerald-400/20 text-emerald-100 border border-emerald-400/40 shadow-[0_10px_30px_-20px_rgba(16,185,129,0.6)]'
-                   : 'text-emerald-100/70 hover:bg-emerald-900/40 hover:text-white border border-transparent'
+                   ? 'bg-cyan-100/25 text-white border border-cyan-100/45 shadow-[0_8px_30px_-18px_rgba(125,211,252,0.7)]'
+                   : 'text-cyan-50/95 hover:bg-cyan-100/15 hover:text-white border border-transparent'
                  }`
               }
             >
@@ -175,24 +175,24 @@ export default function TouristSidebar({ open, onClose }) {
         </nav>
 
         {/* User Profile & Logout Section */}
-        <div className="p-4 border-t border-emerald-900/50 bg-emerald-900/20">
-          <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-emerald-900/40 border border-emerald-800/60 mb-3 cursor-pointer">
+        <div className="p-4 border-t border-cyan-200/35 bg-cyan-900/10">
+          <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-cyan-100/15 border border-cyan-100/30 mb-3 cursor-pointer">
             {photoUrl ? (
-              <img src={photoUrl} alt={touristName} className="w-10 h-10 rounded-full border-2 border-emerald-500/30 shadow-md object-cover flex-shrink-0 bg-white" />
+              <img src={photoUrl} alt={touristName} className="w-10 h-10 rounded-full border-2 border-cyan-500/30 shadow-md object-cover flex-shrink-0 bg-white" />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-amber-200 flex items-center justify-center text-[#06221f] font-bold text-sm flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-300 to-teal-200 flex items-center justify-center text-cyan-950 font-bold text-sm flex-shrink-0">
                 {touristName.charAt(0).toUpperCase()}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-emerald-50 text-sm font-semibold truncate">{touristName}</p>
-              <p className="text-emerald-200/60 text-xs truncate">Premium Member</p>
+              <p className="text-white text-sm font-semibold truncate">{touristName}</p>
+              <p className="text-cyan-50/85 text-xs truncate">Premium Member</p>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-emerald-100/80 hover:text-red-300 hover:bg-red-900/20 rounded-xl transition-all text-sm font-semibold"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-cyan-50 hover:text-red-200 hover:bg-red-900/25 rounded-xl transition-all text-sm font-semibold"
           >
             <MdLogout className="text-lg" />
             <span>Sign Out</span>

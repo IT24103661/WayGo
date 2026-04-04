@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MdDashboard, MdAddBox, MdPendingActions, MdMap, MdLogout, MdClose, MdTour, MdPerson } from 'react-icons/md';
+import { MdDashboard, MdMap, MdLogout, MdClose, MdTour, MdPerson, MdHotel, MdViewKanban, MdInventory2 } from 'react-icons/md';
 
 const NAV_ITEMS = [
   { to: '/dashboard/tourmanager/overview', label: 'Overview', icon: MdDashboard },
   { to: '/dashboard/tourmanager/profile', label: 'Profile Settings', icon: MdPerson },
-  { to: '/dashboard/tourmanager/packages', label: 'Manage Packages', icon: MdAddBox },
   { to: '/dashboard/tourmanager/tours', label: 'Manage Tours', icon: MdTour },
-  { to: '/dashboard/tourmanager/quotes', label: 'Custom Quotes', icon: MdPendingActions },
+  { to: '/dashboard/tourmanager/stay-requests', label: 'Stay Requests', icon: MdHotel },
+  { to: '/dashboard/tourmanager/stay-inventory', label: 'Stay Inventory', icon: MdInventory2 },
+  { to: '/dashboard/tourmanager/stay-board', label: 'Stay Board', icon: MdViewKanban },
   { to: '/dashboard/tourmanager/map', label: 'Active Tours Map', icon: MdMap },
 ];
 

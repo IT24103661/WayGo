@@ -20,7 +20,10 @@ const protect = (req, res, next) => {
         next(); // This tells the server to move on to the actual route
 
     } catch (error) {
-        res.status(401).json({ message: 'Invalid or expired wristband! 🛑' });
+        if (error?.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Session expired. Please log in again.' });
+        }
+        return res.status(401).json({ message: 'Invalid authentication token.' });
     }
 };
 
