@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MdOutlineRequestQuote, MdCheckCircle, MdAccessTime } from 'react-icons/md';
+import { MdOutlineRequestQuote, MdCheckCircle, MdAccessTime, MdAutoAwesome } from 'react-icons/md';
 import { useTourManagerQuotes } from '../../../hooks/useTourManagerAPI';
+import { useTourManagerPackages } from '../../../hooks/useTourManagerAPI';
 
 const DEMO_QUOTES = [
   {
@@ -20,8 +21,11 @@ const DEMO_QUOTES = [
 ];
 
 export default function CustomQuotesSection() {
-  const { quotes, loading, updateQuote } = useTourManagerQuotes('Pending');
+  const [statusFilter, setStatusFilter] = useState('Pending');
+  const { quotes, loading, updateQuote, refetch } = useTourManagerQuotes(statusFilter === 'All' ? '' : statusFilter);
+  const { createPackage } = useTourManagerPackages();
   const [prices, setPrices] = useState({});
+  const [message, setMessage] = useState('');
 
   const displayQuotes = quotes.length > 0 ? quotes : DEMO_QUOTES;
 
@@ -30,11 +34,52 @@ export default function CustomQuotesSection() {
   };
 
   const handleSendQuote = async (quoteId) => {
+    setMessage('');
     const quotedPrice = Number(prices[quoteId]);
     if (!quotedPrice) {
+      setMessage('Enter a valid quote price before sending.');
       return;
     }
-    await updateQuote(quoteId, { quotedPrice, status: 'Quoted' });
+    try {
+      await updateQuote(quoteId, { quotedPrice, status: 'Quoted' });
+      setMessage('Quote sent successfully.');
+      await refetch();
+    } catch (error) {
+      setMessage(error.message || 'Failed to send quote.');
+    }
+  };
+
+  const handleConvertToPackage = async (quote) => {
+    setMessage('');
+    const sourcePrice = Number(prices[quote._id] || quote.quotedPrice || 0);
+
+    if (!sourcePrice) {
+      setMessage('Set a quote price first, then convert to package.');
+      return;
+    }
+
+    const stops = String(quote.requestedRoute || '')
+      .split('->')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const packagePayload = {
+      title: `Custom Route: ${stops[0] || 'Premium Journey'}`,
+      description: `Converted from custom quote ${quote._id}. Route plan: ${quote.requestedRoute || 'Not specified'}`,
+      flatPrice: sourcePrice,
+      durationDays: Math.max(1, stops.length),
+      itineraryStops: stops,
+      vehicleType: 'SUV'
+    };
+
+    try {
+      await createPackage(packagePayload);
+      await updateQuote(quote._id, { quotedPrice: sourcePrice, status: 'Accepted' });
+      setMessage(`Quote ${quote._id} converted into a reusable package.`);
+      await refetch();
+    } catch (error) {
+      setMessage(error.message || 'Failed to convert quote to package.');
+    }
   };
 
   return (
@@ -44,6 +89,22 @@ export default function CustomQuotesSection() {
         <h2 className="text-2xl font-bold text-emerald-950">Pending Custom Quotes</h2>
         <p className="text-emerald-700/80">Review bespoke trip requests and send premium quotes.</p>
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {['Pending', 'Quoted', 'Accepted', 'All'].map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${statusFilter === status ? 'bg-emerald-600 text-white' : 'bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {message && (
+        <p className="text-sm font-semibold text-emerald-700">{message}</p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {loading && (
@@ -97,6 +158,14 @@ export default function CustomQuotesSection() {
                 Send
               </button>
             </div>
+
+            <button
+              onClick={() => handleConvertToPackage(quote)}
+              className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl border border-cyan-200 bg-cyan-50 text-cyan-800 font-semibold hover:bg-cyan-100 transition-colors"
+            >
+              <MdAutoAwesome className="text-lg" />
+              Convert Quote to Package
+            </button>
 
           </div>
         ))}

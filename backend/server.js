@@ -21,6 +21,7 @@ require('./models/Review');
 require('./models/SupportRequest');
 require('./models/FleetNotification');
 require('./models/TouristNotification');
+require('./models/StayInventory');
 const DriverSalary = require('./models/DriverSalary');
 
 // Routes

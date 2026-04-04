@@ -18,11 +18,18 @@ const {
   getTouristNotifications,
   markTouristNotificationRead,
   markAllTouristNotificationsRead,
+  deleteTouristNotification,
   getReviews,
   createReview,
   updateReview,
   deleteReview
 } = require('../controllers/touristController');
+const {
+  createSupportRequest,
+  getMySupportRequests,
+  updateMySupportRequest,
+  deleteMySupportRequest
+} = require('../controllers/supportController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 // All routes require user to be logged in and typically have 'tourist' role
@@ -69,8 +76,20 @@ router.route('/notifications')
 router.route('/notifications/:id/read')
   .patch(markTouristNotificationRead);
 
+router.route('/notifications/:id')
+  .delete(deleteTouristNotification);
+
 router.route('/notifications/read-all')
   .patch(markAllTouristNotificationsRead);
+
+// 2b. Tourist Support Routes
+router.route('/support')
+  .get(getMySupportRequests)
+  .post(createSupportRequest);
+
+router.route('/support/:requestId')
+  .put(updateMySupportRequest)
+  .delete(deleteMySupportRequest);
 
 // 3. Reviews Routes
 router.route('/reviews')

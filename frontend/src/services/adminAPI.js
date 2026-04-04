@@ -1,9 +1,18 @@
 const API_BASE = 'http://localhost:5001/api';
 
-const authHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('waygo_token')}`
-});
+const getToken = () => {
+  const token = localStorage.getItem('waygo_token') || localStorage.getItem('token');
+  if (!token || token === 'null' || token === 'undefined') return null;
+  return token;
+};
+
+const authHeaders = () => {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
 
 const parseJson = async (res) => {
   const text = await res.text();
