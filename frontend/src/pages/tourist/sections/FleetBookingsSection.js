@@ -56,6 +56,32 @@ const estimatePrice = (pickupLocation, dropoffLocation) => {
   return String(Math.round(fare / 50) * 50);
 };
 
+const validateFleetPayload = (payload) => {
+  if (!payload.pickupLocation || payload.pickupLocation.length < 3 || payload.pickupLocation.length > 180) {
+    return 'Pickup location must be between 3 and 180 characters.';
+  }
+  if (!payload.dropoffLocation || payload.dropoffLocation.length < 3 || payload.dropoffLocation.length > 180) {
+    return 'Dropoff location must be between 3 and 180 characters.';
+  }
+  if (payload.pickupLocation.toLowerCase() === payload.dropoffLocation.toLowerCase()) {
+    return 'Pickup and dropoff locations cannot be the same.';
+  }
+
+  const pickupAt = new Date(payload.pickupTime).getTime();
+  if (!pickupAt || Number.isNaN(pickupAt)) {
+    return 'Pickup time must be a valid date and time.';
+  }
+  if (pickupAt < Date.now() + 5 * 60 * 1000) {
+    return 'Pickup time must be at least 5 minutes in the future.';
+  }
+
+  if (Number.isNaN(payload.totalPrice) || payload.totalPrice <= 0 || payload.totalPrice > 5000000) {
+    return 'Total price must be greater than 0 and less than or equal to 5,000,000.';
+  }
+
+  return null;
+};
+
 export default function FleetBookingsSection() {
   const {
     fleetBookings,
@@ -99,8 +125,9 @@ export default function FleetBookingsSection() {
       totalPrice: Number(form.totalPrice)
     };
 
-    if (!payload.pickupLocation || !payload.dropoffLocation || !payload.pickupTime || Number.isNaN(payload.totalPrice) || payload.totalPrice <= 0) {
-      setMessage('Please fill pickup, dropoff, pickup time and price correctly.');
+    const validationError = validateFleetPayload(payload);
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
 
@@ -144,8 +171,9 @@ export default function FleetBookingsSection() {
       totalPrice: Number(editForm.totalPrice)
     };
 
-    if (!payload.pickupLocation || !payload.dropoffLocation || !payload.pickupTime || Number.isNaN(payload.totalPrice) || payload.totalPrice <= 0) {
-      setMessage('Please fill pickup, dropoff, pickup time and price correctly.');
+    const validationError = validateFleetPayload(payload);
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
 

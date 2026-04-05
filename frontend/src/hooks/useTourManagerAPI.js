@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { tourManagerAPI } from '../services/tourManagerAPI';
 
 export const useTourManagerPackages = () => {
@@ -162,7 +162,7 @@ export const useTourManagerQuotes = (status = 'Pending') => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchQuotes = async () => {
+  const fetchQuotes = useCallback(async () => {
     try {
       setLoading(true);
       const result = await tourManagerAPI.getQuotes(status);
@@ -173,7 +173,7 @@ export const useTourManagerQuotes = (status = 'Pending') => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [status]);
 
   const updateQuote = async (quoteId, payload) => {
     try {
@@ -193,10 +193,8 @@ export const useTourManagerQuotes = (status = 'Pending') => {
   };
 
   useEffect(() => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-
     fetchQuotes();
-  }, [status]);
+  }, [fetchQuotes]);
 
   return { quotes, loading, error, updateQuote, refetch: fetchQuotes };
 };
@@ -272,7 +270,7 @@ export const useTourManagerStayRequests = (status = '') => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchRequests = async ({ showLoader = true } = {}) => {
+  const fetchRequests = useCallback(async ({ showLoader = true } = {}) => {
     try {
       if (showLoader) {
         setLoading(true);
@@ -287,7 +285,7 @@ export const useTourManagerStayRequests = (status = '') => {
         setLoading(false);
       }
     }
-  };
+  }, [status]);
 
   const allocateStay = async (bookingId, payload) => {
     try {
@@ -339,7 +337,7 @@ export const useTourManagerStayRequests = (status = '') => {
 
   useEffect(() => {
     fetchRequests();
-  }, [status]);
+  }, [fetchRequests]);
 
   return {
     requests,

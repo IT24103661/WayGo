@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema({
         default: 'Tourist',
         required: true
     },
+    adminStatus: {
+        type: String,
+        enum: ['Active', 'Inactive'],
+        default: 'Active',
+        index: true
+    },
     phone: {
         type: String,
         required: true

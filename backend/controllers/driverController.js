@@ -4,6 +4,8 @@ const Vehicle = require('../models/Vehicle');
 
 const VALID_STATUSES = ['Online', 'Offline', 'On Trip'];
 const VEHICLE_PLATE_REGEX = /^[A-Z]{2,3}-\d{4}$/;
+const VEHICLE_TYPES = ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'];
+const VEHICLE_CATEGORIES = ['Economy', 'Luxury', 'Van', 'SUV'];
 
 exports.updateStatus = async (req, res) => {
   try {
@@ -108,14 +110,14 @@ exports.getAvailableJobs = async (req, res) => {
     // Normally, this might be filtered by geographic location or permissions
     const driver = await User.findById(req.user.userId);
     
-    let query = { status: 'Pending', assignedDriver: { $exists: false } };
+    let query = { status: 'Pending', assignedDriver: null };
     
     // If not tour certified, driver can only see 'Taxi' bookings
     if (!driver.isTourCertified) {
       query.bookingType = 'Taxi';
     }
 
-    const availableJobs = await Booking.find(query).populate('touristeId', 'name email phone');
+    const availableJobs = await Booking.find(query).populate('tourist', 'name email phone');
     return res.json({ data: availableJobs });
   } catch (error) {
     return res.status(500).json({ message: 'Server error fetching available jobs.' });
@@ -125,8 +127,8 @@ exports.getAvailableJobs = async (req, res) => {
 exports.getMyJobs = async (req, res) => {
   try {
     const myJobs = await Booking.find({ assignedDriver: req.user.userId })
-      .populate('touristeId', 'name email phone')
-      .populate('assignedVehicle', 'licensePlate make model')
+      .populate('tourist', 'name email phone')
+      .populate('assignedVehicle', 'plateNumber make model')
       .sort({ createdAt: -1 });
     
     return res.json({ data: myJobs });
@@ -138,9 +140,9 @@ exports.getMyJobs = async (req, res) => {
 exports.updateJobStatus = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const { status } = req.body; // e.g. 'In Progress', 'Completed'
+    const { status } = req.body; // e.g. 'En Route', 'Completed'
 
-    const validBookingStatuses = ['Accepted', 'In Progress', 'Completed', 'Cancelled'];
+    const validBookingStatuses = ['Accepted', 'En Route', 'Completed', 'Cancelled'];
     if (!validBookingStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid booking status.' });
     }
@@ -199,6 +201,7 @@ exports.updateMyVehicleProfile = async (req, res) => {
     const {
       plateNumber,
       make,
+      brand,
       model,
       year,
       type,
@@ -216,11 +219,40 @@ exports.updateMyVehicleProfile = async (req, res) => {
     }
 
     if (make !== undefined) vehicle.make = String(make).trim();
+    if (brand !== undefined) vehicle.brand = String(brand).trim();
     if (model !== undefined) vehicle.model = String(model).trim();
-    if (year !== undefined) vehicle.year = Number(year);
-    if (type !== undefined) vehicle.type = type;
-    if (category !== undefined) vehicle.category = category;
-    if (capacity !== undefined) vehicle.capacity = Number(capacity);
+
+    if (year !== undefined) {
+      const y = Number(year);
+      const maxYear = new Date().getFullYear() + 1;
+      if (!Number.isFinite(y) || y < 1980 || y > maxYear) {
+        return res.status(400).json({ message: `Year must be between 1980 and ${maxYear}.` });
+      }
+      vehicle.year = y;
+    }
+
+    if (type !== undefined) {
+      if (!VEHICLE_TYPES.includes(type)) {
+        return res.status(400).json({ message: 'Invalid vehicle type.' });
+      }
+      vehicle.type = type;
+    }
+
+    if (category !== undefined) {
+      if (!VEHICLE_CATEGORIES.includes(category)) {
+        return res.status(400).json({ message: 'Invalid vehicle category.' });
+      }
+      vehicle.category = category;
+    }
+
+    if (capacity !== undefined) {
+      const cap = Number(capacity);
+      if (!Number.isFinite(cap) || cap < 1 || cap > 60) {
+        return res.status(400).json({ message: 'Capacity must be between 1 and 60.' });
+      }
+      vehicle.capacity = cap;
+    }
+
     if (color !== undefined) vehicle.color = String(color).trim();
 
     await vehicle.save();

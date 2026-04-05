@@ -1,5 +1,15 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { MdEdit, MdPersonOutline } from 'react-icons/md';
+
+const VEHICLE_TYPES = ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'];
+const VEHICLE_CATEGORIES = ['Economy', 'Luxury', 'Van', 'SUV'];
+
+const formatDate = (value) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString();
+};
 
 export default function SettingsSection() {
     const [user, setUser] = useState(null);
@@ -17,20 +27,16 @@ export default function SettingsSection() {
     const [vehicleFormData, setVehicleFormData] = useState({
         plateNumber: '',
         make: '',
+        brand: '',
         model: '',
+        type: '',
+        category: '',
         year: '',
         color: '',
         capacity: ''
     });
     const [formErrors, setFormErrors] = useState({});
     const [vehicleErrors, setVehicleErrors] = useState({});
-    const [inputPopupError, setInputPopupError] = useState('');
-
-    useEffect(() => {
-        if (!inputPopupError) return undefined;
-        const timer = setTimeout(() => setInputPopupError(''), 2000);
-        return () => clearTimeout(timer);
-    }, [inputPopupError]);
 
     const parseResponse = async (res) => {
         const text = await res.text();
@@ -94,7 +100,10 @@ export default function SettingsSection() {
                 setVehicleFormData({
                     plateNumber: '',
                     make: '',
+                    brand: '',
                     model: '',
+                    type: '',
+                    category: '',
                     year: '',
                     color: '',
                     capacity: ''
@@ -107,7 +116,10 @@ export default function SettingsSection() {
                 setVehicleFormData({
                     plateNumber: json.data.plateNumber || '',
                     make: json.data.make || '',
+                    brand: json.data.brand || '',
                     model: json.data.model || '',
+                    type: json.data.type || '',
+                    category: json.data.category || '',
                     year: json.data.year || '',
                     color: json.data.color || '',
                     capacity: json.data.capacity || ''
@@ -142,11 +154,10 @@ export default function SettingsSection() {
             errors.email = 'Enter a valid email address.';
         }
 
-        const numericPhone = trimmedPhone.replace(/\D/g, '');
         if (!trimmedPhone) {
             errors.phone = 'Phone number is required.';
-        } else if (numericPhone.length < 9 || numericPhone.length > 15) {
-            errors.phone = 'Phone number should be 9 to 15 digits.';
+        } else if (!/^\d{11}$/.test(trimmedPhone)) {
+            errors.phone = 'Phone number must contain exactly 11 digits (numbers only).';
         }
 
         setFormErrors(errors);
@@ -203,6 +214,18 @@ export default function SettingsSection() {
             errors.model = 'Vehicle model is required.';
         }
 
+        if (vehicleFormData.brand && vehicleFormData.brand.trim().length > 40) {
+            errors.brand = 'Brand should be 40 characters or fewer.';
+        }
+
+        if (!vehicleFormData.type || !VEHICLE_TYPES.includes(vehicleFormData.type)) {
+            errors.type = 'Vehicle type is required.';
+        }
+
+        if (!vehicleFormData.category || !VEHICLE_CATEGORIES.includes(vehicleFormData.category)) {
+            errors.category = 'Vehicle category is required.';
+        }
+
         const yearNumber = Number(vehicleFormData.year);
         const currentYear = new Date().getFullYear() + 1;
         if (Number.isNaN(yearNumber) || yearNumber < 1980 || yearNumber > currentYear) {
@@ -231,7 +254,10 @@ export default function SettingsSection() {
                 body: JSON.stringify({
                     plateNumber: plate,
                     make: vehicleFormData.make,
+                    brand: vehicleFormData.brand,
                     model: vehicleFormData.model,
+                    type: vehicleFormData.type,
+                    category: vehicleFormData.category,
                     year: yearNumber,
                     color: vehicleFormData.color,
                     capacity: capacityNumber
@@ -242,6 +268,17 @@ export default function SettingsSection() {
             if (!res.ok) throw new Error(json.message || 'Failed to update vehicle profile');
 
             setVehicle(json.data);
+            setVehicleFormData({
+                plateNumber: json.data.plateNumber || '',
+                make: json.data.make || '',
+                brand: json.data.brand || '',
+                model: json.data.model || '',
+                type: json.data.type || '',
+                category: json.data.category || '',
+                year: json.data.year || '',
+                color: json.data.color || '',
+                capacity: json.data.capacity || ''
+            });
             setVehicleEditMode(false);
             setVehicleErrors({});
             alert('Vehicle details updated successfully!');
@@ -252,32 +289,44 @@ export default function SettingsSection() {
         }
     };
 
+    const maintenanceInfo = useMemo(() => {
+        if (!vehicle) return null;
+
+        const current = Number(vehicle?.mileage?.current || 0);
+        const lastService = Number(vehicle?.mileage?.lastService || 0);
+        const interval = Number(vehicle?.mileage?.serviceInterval || 5000);
+        const usedSinceService = Math.max(0, current - lastService);
+        const remaining = Math.max(0, interval - usedSinceService);
+
+        return {
+            current,
+            lastService,
+            interval,
+            remaining,
+            isDue: remaining === 0,
+            lastServiceDate: vehicle?.lastServiceDate,
+            insuranceExpiry: vehicle?.insuranceExpiry || vehicle?.compliance?.insuranceExpiry
+        };
+    }, [vehicle]);
+
     return (
         <div className='space-y-8'>
-            {inputPopupError && (
-                <div className='fixed top-5 right-5 z-50'>
-                    <div className='rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 shadow-lg'>
-                        {inputPopupError}
-                    </div>
-                </div>
-            )}
-
             <div className='flex flex-col gap-2'>
-                <p className='text-xs font-semibold tracking-[0.3em] text-emerald-700 uppercase'>Preferences</p>
-                <h2 className='text-2xl font-bold text-emerald-950'>My Profile</h2>
-                <p className='text-emerald-700/80'>Manage your profile and payment details.</p>
+                <p className='text-xs font-semibold tracking-[0.3em] text-cyan-700 uppercase'>Preferences</p>
+                <h2 className='text-2xl font-bold text-cyan-950'>My Profile</h2>
+                <p className='text-cyan-700/80'>Manage your profile and payment details.</p>
             </div>
 
-            <div className='bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-[0_20px_45px_-35px_rgba(16,185,129,0.2)] border border-emerald-200'>
+            <div className='bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-[0_20px_45px_-35px_rgba(8,145,178,0.2)] border border-cyan-200'>
                 <div className='flex justify-between items-center mb-8'>
-                    <h3 className='text-lg font-bold text-emerald-950 flex items-center gap-2'>
-                        <MdPersonOutline className='text-emerald-500 text-2xl' />
+                    <h3 className='text-lg font-bold text-cyan-950 flex items-center gap-2'>
+                        <MdPersonOutline className='text-cyan-500 text-2xl' />
                         Personal Information
                     </h3>
                     <button
                         onClick={editMode ? handleSave : () => setEditMode(true)}
                         disabled={loading}
-                        className='px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:-translate-y-0.5'
+                        className='px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 hover:-translate-y-0.5'
                     >
                         {editMode ? (loading ? 'Saving...' : 'Save Changes') : (
                             <>
@@ -293,40 +342,34 @@ export default function SettingsSection() {
                         const key = field.toLowerCase();
                         return (
                             <div key={key} className='space-y-2'>
-                                <label className='text-sm font-semibold text-emerald-800'>{field}</label>
+                                <label className='text-sm font-semibold text-cyan-800'>{field}</label>
                                 {editMode ? (
                                     <>
                                         <input 
-                                            className='w-full px-4 py-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all'
+                                            className='w-full px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all'
                                             value={formData[key]}
                                             onChange={e => {
                                                 const rawValue = e.target.value;
-                                                if (key === 'phone' && /\D/.test(rawValue)) {
-                                                    setInputPopupError('Only numbers are allowed for contact number.');
-                                                    setFormErrors((prev) => ({
-                                                        ...prev,
-                                                        phone: 'Only numbers are allowed for contact number.'
-                                                    }));
-                                                } else if (key === 'phone') {
+                                                if (key === 'phone') {
                                                     setFormErrors((prev) => ({
                                                         ...prev,
                                                         phone: ''
                                                     }));
                                                 }
                                                 const value = key === 'phone'
-                                                    ? rawValue.replace(/\D/g, '')
+                                                    ? rawValue.replace(/\D/g, '').slice(0, 11)
                                                     : rawValue;
                                                 setFormData({ ...formData, [key]: value });
                                             }}
                                             type={key === 'email' ? 'email' : 'text'}
                                             inputMode={key === 'phone' ? 'numeric' : undefined}
                                             pattern={key === 'phone' ? '[0-9]*' : undefined}
-                                            maxLength={key === 'phone' ? 15 : undefined}
+                                            maxLength={key === 'phone' ? 11 : undefined}
                                         />
                                         {formErrors[key] && <p className='text-xs text-rose-600 mt-1'>{formErrors[key]}</p>}
                                     </>
                                 ) : (
-                                    <div className='px-4 py-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-emerald-900 font-medium break-words'>
+                                    <div className='px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 font-medium break-words'>
                                         {formData[key] || 'Not Set'}
                                     </div>
                                 )}
@@ -336,16 +379,16 @@ export default function SettingsSection() {
                 </div>
             </div>
 
-            <div className='bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-[0_20px_45px_-35px_rgba(16,185,129,0.2)] border border-emerald-200'>
+            <div className='bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-[0_20px_45px_-35px_rgba(8,145,178,0.2)] border border-cyan-200'>
                 <div className='flex justify-between items-center mb-8'>
-                    <h3 className='text-lg font-bold text-emerald-950 flex items-center gap-2'>
-                        <MdPersonOutline className='text-emerald-500 text-2xl' />
+                    <h3 className='text-lg font-bold text-cyan-950 flex items-center gap-2'>
+                        <MdPersonOutline className='text-cyan-500 text-2xl' />
                         Vehicle Information
                     </h3>
                     <button
                         onClick={vehicleEditMode ? handleVehicleSave : () => setVehicleEditMode(true)}
                         disabled={vehicleLoading || !vehicle}
-                        className='px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:-translate-y-0.5 disabled:opacity-60'
+                        className='px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 hover:-translate-y-0.5 disabled:opacity-60'
                     >
                         {vehicleEditMode ? (vehicleLoading ? 'Saving...' : 'Save Vehicle') : (
                             <>
@@ -363,38 +406,79 @@ export default function SettingsSection() {
                 )}
 
                 {vehicle && (
+                    <>
+                    {maintenanceInfo && (
+                        <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${maintenanceInfo.isDue ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-cyan-50 border-cyan-200 text-cyan-700'}`}>
+                            <p className='font-semibold'>Maintenance Reminder</p>
+                            <p className='mt-1'>Current Mileage: {maintenanceInfo.current.toLocaleString()} km</p>
+                            <p>Last Service Mileage: {maintenanceInfo.lastService.toLocaleString()} km</p>
+                            <p>Service Interval: {maintenanceInfo.interval.toLocaleString()} km</p>
+                            <p>{maintenanceInfo.isDue ? 'Service is due now.' : `${maintenanceInfo.remaining.toLocaleString()} km remaining to next service.`}</p>
+                            <p>Last Service Date: {formatDate(maintenanceInfo.lastServiceDate)}</p>
+                            <p>Insurance Expiry: {formatDate(maintenanceInfo.insuranceExpiry)}</p>
+                        </div>
+                    )}
+
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                         {[
                             ['plateNumber', 'Plate Number'],
                             ['make', 'Make'],
+                            ['brand', 'Brand'],
                             ['model', 'Model'],
+                            ['type', 'Type'],
+                            ['category', 'Category'],
                             ['year', 'Year'],
                             ['color', 'Color'],
                             ['capacity', 'Capacity']
                         ].map(([key, label]) => (
                             <div key={key} className='space-y-2'>
-                                <label className='text-sm font-semibold text-emerald-800'>{label}</label>
+                                <label className='text-sm font-semibold text-cyan-800'>{label}</label>
                                 {vehicleEditMode ? (
                                     <>
-                                        <input
-                                            className='w-full px-4 py-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all'
-                                            value={vehicleFormData[key]}
-                                            onChange={(e) => {
-                                                const value = key === 'plateNumber' ? e.target.value.toUpperCase() : e.target.value;
-                                                setVehicleFormData({ ...vehicleFormData, [key]: value });
-                                            }}
-                                            placeholder={key === 'plateNumber' ? 'BGK-1234' : undefined}
-                                        />
+                                        {key === 'type' ? (
+                                            <select
+                                                className='w-full px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all'
+                                                value={vehicleFormData.type}
+                                                onChange={(e) => setVehicleFormData({ ...vehicleFormData, type: e.target.value })}
+                                            >
+                                                <option value=''>Select vehicle type</option>
+                                                {VEHICLE_TYPES.map((type) => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                        ) : key === 'category' ? (
+                                            <select
+                                                className='w-full px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all'
+                                                value={vehicleFormData.category}
+                                                onChange={(e) => setVehicleFormData({ ...vehicleFormData, category: e.target.value })}
+                                            >
+                                                <option value=''>Select vehicle category</option>
+                                                {VEHICLE_CATEGORIES.map((category) => (
+                                                    <option key={category} value={category}>{category}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <input
+                                                className='w-full px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all'
+                                                value={vehicleFormData[key]}
+                                                onChange={(e) => {
+                                                    const value = key === 'plateNumber' ? e.target.value.toUpperCase() : e.target.value;
+                                                    setVehicleFormData({ ...vehicleFormData, [key]: value });
+                                                }}
+                                                placeholder={key === 'plateNumber' ? 'BGK-1234' : undefined}
+                                            />
+                                        )}
                                         {vehicleErrors[key] && <p className='text-xs text-rose-600 mt-1'>{vehicleErrors[key]}</p>}
                                     </>
                                 ) : (
-                                    <div className='px-4 py-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-emerald-900 font-medium break-words'>
+                                    <div className='px-4 py-3 rounded-2xl bg-cyan-50/50 border border-cyan-100 text-cyan-900 font-medium break-words'>
                                         {vehicleFormData[key] || 'Not Set'}
                                     </div>
                                 )}
                             </div>
                         ))}
                     </div>
+                    </>
                 )}
             </div>
         </div>

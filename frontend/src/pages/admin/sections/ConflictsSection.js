@@ -1,38 +1,57 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MdCheck, MdClose, MdBlock, MdUndo, MdWarning, MdSearch } from 'react-icons/md';
-
-/* ─────────────────────────────────────────
-   REFUND REQUESTS
-───────────────────────────────────────── */
-const INITIAL_REFUNDS = [
-  { id: 'RF-001', tourist: 'Emma Thompson',    booking: '#BK-0045', amount: 'LKR 9,000',  reason: 'Tour cancelled due to weather',         status: 'Pending', date: 'Mar 10, 2026' },
-  { id: 'RF-002', tourist: 'Amal Perera',      booking: '#BK-0039', amount: 'LKR 4,200',  reason: 'Driver did not arrive on time',          status: 'Pending', date: 'Mar 9, 2026'  },
-  { id: 'RF-003', tourist: 'Sara Fernando',    booking: '#BK-0031', amount: 'LKR 18,000', reason: 'Medical emergency — full refund request', status: 'Approved', date: 'Mar 5, 2026' },
-  { id: 'RF-004', tourist: 'Nimal Silva',      booking: '#BK-0027', amount: 'LKR 2,500',  reason: 'Duplicate booking',                     status: 'Rejected', date: 'Mar 3, 2026' },
-];
-
-/* ─────────────────────────────────────────
-   BANNED USERS
-───────────────────────────────────────── */
-const INITIAL_BANS = [
-  { id: 'BN-001', name: 'John Fake',      role: 'Tourist', reason: 'Fraudulent booking pattern', bannedOn: 'Mar 1, 2026',  active: true  },
-  { id: 'BN-002', name: 'Pradeep Driver', role: 'Driver',  reason: 'Repeated no-shows',          bannedOn: 'Feb 20, 2026', active: true  },
-  { id: 'BN-003', name: 'Spam User',      role: 'Tourist', reason: 'Abusive behaviour',          bannedOn: 'Feb 10, 2026', active: false },
-];
+import { adminAPI } from '../../../services/adminAPI';
 
 /* ─────────────────────────────────────────
    BAN USER MODAL
 ───────────────────────────────────────── */
-function BanModal({ onConfirm, onClose }) {
+function BanModal({ onConfirm, onClose, saving, existingBans = [] }) {
   const [form, setForm] = useState({ name: '', role: 'Tourist', reason: '' });
+  const [errors, setErrors] = useState({ name: '', reason: '' });
+
+  const validate = () => {
+    const nextErrors = { name: '', reason: '' };
+    const trimmedName = form.name.trim();
+    const trimmedReason = form.reason.trim();
+
+    if (!trimmedName) {
+      nextErrors.name = 'Name is required.';
+    } else if (trimmedName.length < 3) {
+      nextErrors.name = 'Name must be at least 3 characters.';
+    } else if (trimmedName.length > 60) {
+      nextErrors.name = 'Name must be 60 characters or fewer.';
+    }
+
+    if (!trimmedReason) {
+      nextErrors.reason = 'Reason is required.';
+    } else if (trimmedReason.length < 8) {
+      nextErrors.reason = 'Reason must be at least 8 characters.';
+    } else if (trimmedReason.length > 250) {
+      nextErrors.reason = 'Reason must be 250 characters or fewer.';
+    }
+
+    const hasActiveDuplicate = existingBans.some((item) => (
+      item.active
+      && String(item.name || '').trim().toLowerCase() === trimmedName.toLowerCase()
+      && String(item.role || '').trim() === form.role
+    ));
+
+    if (hasActiveDuplicate) {
+      nextErrors.name = 'An active ban already exists for this name and role.';
+    }
+
+    setErrors(nextErrors);
+    return !nextErrors.name && !nextErrors.reason;
+  };
+
   const change = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2"><MdBlock className="text-red-500" /> Ban User / Driver</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><MdClose className="text-xl" /></button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-900 flex items-center gap-2"><MdBlock className="text-red-500" /> Ban User / Driver</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-700 p-1 rounded-lg hover:bg-gray-100"><MdClose className="text-xl" /></button>
         </div>
         <div className="px-6 py-5 space-y-4">
           {[
@@ -40,26 +59,39 @@ function BanModal({ onConfirm, onClose }) {
             { label: 'Reason', name: 'reason', type: 'text',   placeholder: 'Brief reason for ban' },
           ].map(({ label, name, type, placeholder }) => (
             <div key={name}>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">{label}</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
               <input name={name} type={type} value={form[name]} onChange={change} placeholder={placeholder}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+              {name === 'name' && errors.name && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.name}</p>}
+              {name === 'reason' && errors.reason && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.reason}</p>}
             </div>
           ))}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Role</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Role</label>
             <select name="role" value={form.role} onChange={change}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
-              <option>Tourist</option><option>Driver</option>
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+              <option>Tourist</option>
+              <option>Driver</option>
+              <option>TourManager</option>
+              <option>FleetManager</option>
             </select>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
+          <button onClick={onClose} disabled={saving} className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">Cancel</button>
           <button
-            onClick={() => { if (form.name && form.reason) { onConfirm(form); onClose(); } }}
-            className="text-sm px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+            onClick={() => {
+                if (!validate()) return;
+              onConfirm({
+                name: form.name.trim(),
+                role: form.role,
+                reason: form.reason.trim()
+              });
+            }}
+              disabled={saving}
+            className="text-sm px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Confirm Ban
+            {saving ? 'Saving...' : 'Confirm Ban'}
           </button>
         </div>
       </div>
@@ -71,29 +103,115 @@ function BanModal({ onConfirm, onClose }) {
    MAIN SECTION
 ───────────────────────────────────────── */
 export default function ConflictsSection() {
-  const [refunds, setRefunds] = useState(INITIAL_REFUNDS);
-  const [bans, setBans]       = useState(INITIAL_BANS);
+  const [refunds, setRefunds] = useState([]);
+  const [bans, setBans] = useState([]);
+  const [loadingRefunds, setLoadingRefunds] = useState(false);
+  const [loadingBans, setLoadingBans] = useState(false);
+  const [savingBan, setSavingBan] = useState(false);
+  const [actingRefundId, setActingRefundId] = useState('');
+  const [actingBanId, setActingBanId] = useState('');
+  const [refundStatusFilter, setRefundStatusFilter] = useState('All');
   const [showBanModal, setShowBanModal] = useState(false);
-  const [banSearch, setBanSearch]       = useState('');
+  const [banSearch, setBanSearch] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  function processRefund(id, action) {
-    setRefunds((prev) =>
-      prev.map((r) => r.id === id ? { ...r, status: action === 'approve' ? 'Approved' : 'Rejected' } : r)
-    );
-  }
+  const askDecisionNote = (status) => {
+    const note = window.prompt(`Optional decision note for ${status}:`, '') ?? '';
+    const trimmed = note.trim();
+    if (trimmed.length > 250) {
+      setError('Decision note must be 250 characters or fewer.');
+      return null;
+    }
+    return trimmed;
+  };
 
-  function addBan(form) {
-    setBans((prev) => [
-      { id: `BN-${String(prev.length + 1).padStart(3, '0')}`, ...form,
-        bannedOn: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-        active: true },
-      ...prev,
-    ]);
-  }
+  const fetchRefunds = useCallback(async () => {
+    try {
+      setLoadingRefunds(true);
+      const res = await adminAPI.getRefundRequests(refundStatusFilter === 'All' ? '' : refundStatusFilter);
+      setRefunds(res.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load refund requests.');
+    } finally {
+      setLoadingRefunds(false);
+    }
+  }, [refundStatusFilter]);
 
-  function toggleBan(id) {
-    setBans((prev) => prev.map((b) => b.id === id ? { ...b, active: !b.active } : b));
-  }
+  const fetchBans = useCallback(async () => {
+    try {
+      setLoadingBans(true);
+      const res = await adminAPI.getBans('');
+      setBans(res.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load bans.');
+    } finally {
+      setLoadingBans(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRefunds();
+  }, [fetchRefunds]);
+
+  useEffect(() => {
+    fetchBans();
+  }, [fetchBans]);
+
+  const processRefund = async (id, nextStatus) => {
+    try {
+      const decisionNote = askDecisionNote(nextStatus);
+      if (decisionNote === null) return;
+      if (nextStatus === 'Rejected' && decisionNote.length < 8) {
+        setError('Please provide at least 8 characters in the rejection note.');
+        return;
+      }
+
+      setActingRefundId(id);
+      setError('');
+      setMessage('');
+      await adminAPI.updateRefundRequest(id, { status: nextStatus, decisionNote });
+      setRefunds((prev) => prev.map((r) => (r._id === id ? { ...r, status: nextStatus } : r)));
+      setMessage(`Refund ${nextStatus.toLowerCase()} successfully.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update refund request.');
+    } finally {
+      setActingRefundId('');
+    }
+  };
+
+  const addBan = async (form) => {
+    try {
+      setSavingBan(true);
+      setError('');
+      setMessage('');
+      const res = await adminAPI.createBan(form);
+      if (res?.data) {
+        setBans((prev) => [res.data, ...prev]);
+      }
+      setShowBanModal(false);
+      setMessage('Ban created successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to create ban.');
+    } finally {
+      setSavingBan(false);
+    }
+  };
+
+  const toggleBan = async (ban) => {
+    try {
+      setActingBanId(ban._id);
+      setError('');
+      setMessage('');
+      await adminAPI.updateBan(ban._id, { active: !ban.active });
+      setBans((prev) => prev.map((b) => (b._id === ban._id ? { ...b, active: !b.active } : b)));
+      setMessage(ban.active ? 'Ban lifted successfully.' : 'Ban re-activated successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to update ban status.');
+    } finally {
+      setActingBanId('');
+    }
+  };
 
   const REFUND_STATUS = {
     Pending:  'bg-yellow-100 text-yellow-700',
@@ -101,14 +219,24 @@ export default function ConflictsSection() {
     Rejected: 'bg-red-100 text-red-600',
   };
 
-  const filteredBans = bans.filter((b) =>
-    b.name.toLowerCase().includes(banSearch.toLowerCase()) ||
-    b.reason.toLowerCase().includes(banSearch.toLowerCase())
-  );
+  const filteredBans = useMemo(() => bans.filter((b) => {
+    const q = banSearch.toLowerCase().trim();
+    if (!q) return true;
+    return String(b.name || '').toLowerCase().includes(q)
+      || String(b.reason || '').toLowerCase().includes(q)
+      || String(b.role || '').toLowerCase().includes(q);
+  }), [bans, banSearch]);
 
   return (
-    <div className="space-y-6">
-      {showBanModal && <BanModal onConfirm={addBan} onClose={() => setShowBanModal(false)} />}
+    <div className="space-y-6 wg-admin-motion wg-motion-conflicts">
+      <div className="relative overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-r from-rose-600 via-red-600 to-orange-500 px-6 py-5 text-white shadow-[0_26px_55px_-35px_rgba(225,29,72,0.75)]">
+        <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/15 blur-xl" />
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-100">Risk Desk</p>
+        <h2 className="mt-1 text-xl font-bold">Conflict Resolution Center</h2>
+        <p className="mt-1 text-sm text-rose-100/95">Handle refunds, enforce bans, and document sensitive administrative actions.</p>
+      </div>
+
+      {showBanModal && <BanModal onConfirm={addBan} onClose={() => setShowBanModal(false)} saving={savingBan} existingBans={bans} />}
 
       {/* ── Alert banner ── */}
       <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
@@ -117,41 +245,61 @@ export default function ConflictsSection() {
       </div>
 
       {/* ── Refund Requests ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-gray-800">Refund Requests</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h2 className="text-base font-bold text-slate-900">Refund Requests</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
               {refunds.filter((r) => r.status === 'Pending').length} pending review
             </p>
           </div>
-          <div className="flex gap-2 text-xs">
+          <div className="flex gap-2 text-xs items-center">
             <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full font-semibold">
               {refunds.filter((r) => r.status === 'Pending').length} Pending
             </span>
             <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
               {refunds.filter((r) => r.status === 'Approved').length} Approved
             </span>
+            <select
+              value={refundStatusFilter}
+              onChange={(e) => setRefundStatusFilter(e.target.value)}
+              className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white"
+            >
+              <option value="All">All</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <tr className="bg-slate-50/80 text-left text-xs text-slate-600 uppercase tracking-wider">
                 {['ID','Tourist','Booking','Amount','Reason','Date','Status','Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {refunds.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs text-gray-400">{r.id}</td>
-                  <td className="px-5 py-3 font-medium text-gray-800">{r.tourist}</td>
-                  <td className="px-5 py-3 font-mono text-xs text-gray-500">{r.booking}</td>
-                  <td className="px-5 py-3 font-semibold text-gray-800">{r.amount}</td>
-                  <td className="px-5 py-3 text-gray-500 max-w-[200px] truncate">{r.reason}</td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">{r.date}</td>
+            <tbody className="divide-y divide-slate-100">
+              {loadingRefunds && (
+                <tr>
+                  <td colSpan={8} className="px-5 py-8 text-center text-slate-500 text-sm">Loading refund requests...</td>
+                </tr>
+              )}
+              {!loadingRefunds && refunds.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-5 py-8 text-center text-slate-500 text-sm">No refund requests found.</td>
+                </tr>
+              )}
+              {!loadingRefunds && refunds.map((r) => (
+                <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-slate-500">{String(r._id).slice(-6).toUpperCase()}</td>
+                  <td className="px-5 py-3 font-medium text-slate-900">{r.tourist?.name || '-'}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-slate-600">{r.booking?.bookingType || '-'}</td>
+                  <td className="px-5 py-3 font-semibold text-slate-900">LKR {Number(r.amount || 0).toLocaleString()}</td>
+                  <td className="px-5 py-3 text-slate-600 max-w-[200px] truncate">{r.reason}</td>
+                  <td className="px-5 py-3 text-slate-500 text-xs">{new Date(r.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3">
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${REFUND_STATUS[r.status]}`}>
                       {r.status}
@@ -161,14 +309,16 @@ export default function ConflictsSection() {
                     {r.status === 'Pending' && (
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => processRefund(r.id, 'approve')}
-                          className="flex items-center gap-1 text-xs border border-emerald-200 text-emerald-600 px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+                          onClick={() => processRefund(r._id, 'Approved')}
+                          disabled={actingRefundId === r._id}
+                          className="flex items-center gap-1 text-xs border border-emerald-200 text-emerald-600 px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <MdCheck className="text-sm" /> Approve
                         </button>
                         <button
-                          onClick={() => processRefund(r.id, 'reject')}
-                          className="flex items-center gap-1 text-xs border border-red-200 text-red-500 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          onClick={() => processRefund(r._id, 'Rejected')}
+                          disabled={actingRefundId === r._id}
+                          className="flex items-center gap-1 text-xs border border-red-200 text-red-500 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <MdClose className="text-sm" /> Reject
                         </button>
@@ -183,21 +333,21 @@ export default function ConflictsSection() {
       </div>
 
       {/* ── Banned Users ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-gray-800">Banned Accounts</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{bans.filter((b) => b.active).length} active bans</p>
+            <h2 className="text-base font-bold text-slate-900">Banned Accounts</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{bans.filter((b) => b.active).length} active bans</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 placeholder="Search bans..."
                 value={banSearch}
                 onChange={(e) => setBanSearch(e.target.value)}
-                className="text-sm border border-gray-200 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 w-44"
+                className="text-sm border border-slate-200 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 w-44"
               />
             </div>
             <button
@@ -211,50 +361,57 @@ export default function ConflictsSection() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <tr className="bg-slate-50/80 text-left text-xs text-slate-600 uppercase tracking-wider">
                 {['ID','Name','Role','Reason','Banned On','Status','Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-100">
+              {loadingBans && (
+                <tr><td colSpan={7} className="px-5 py-8 text-center text-slate-500 text-sm">Loading bans...</td></tr>
+              )}
               {filteredBans.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs text-gray-400">{b.id}</td>
-                  <td className="px-5 py-3 font-medium text-gray-800">{b.name}</td>
+                <tr key={b._id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-slate-500">{String(b._id).slice(-6).toUpperCase()}</td>
+                  <td className="px-5 py-3 font-medium text-slate-900">{b.name}</td>
                   <td className="px-5 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${b.role === 'Driver' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                       {b.role}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-gray-500 max-w-[180px] truncate">{b.reason}</td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">{b.bannedOn}</td>
+                  <td className="px-5 py-3 text-slate-600 max-w-[180px] truncate">{b.reason}</td>
+                  <td className="px-5 py-3 text-slate-500 text-xs">{new Date(b.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${b.active ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${b.active ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-slate-600'}`}>
                       {b.active ? 'Banned' : 'Lifted'}
                     </span>
                   </td>
                   <td className="px-5 py-3">
                     <button
-                      onClick={() => toggleBan(b.id)}
+                      onClick={() => toggleBan(b)}
+                      disabled={actingBanId === b._id}
                       className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded-lg transition-colors ${
                         b.active
-                          ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          ? 'border-slate-200 text-slate-700 hover:bg-slate-50/80'
                           : 'border-red-200 text-red-500 hover:bg-red-50'
-                      }`}
+                      } disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {b.active ? <><MdUndo className="text-sm" /> Lift Ban</> : <><MdBlock className="text-sm" /> Re-ban</>}
                     </button>
                   </td>
                 </tr>
               ))}
-              {filteredBans.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No banned accounts found.</td></tr>
+              {!loadingBans && filteredBans.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-500 text-sm">No banned accounts found.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {message && <p className="text-sm text-emerald-700 font-semibold">{message}</p>}
+      {error && <p className="text-sm text-rose-700 font-semibold">{error}</p>}
     </div>
   );
 }

@@ -14,6 +14,7 @@ const STAY_STATUS_FLOW = [
 ];
 
 const ROOM_TYPES = ['Standard', 'Deluxe', 'Family', 'Suite'];
+const CHECKED_OUT_HIDE_AFTER_MS = 2 * 60 * 1000;
 
 const rangesOverlap = (startA, endA, startB, endB) => {
   return startA < endB && startB < endA;
@@ -174,6 +175,15 @@ const normalizeItinerary = (value) => {
     })
     .filter(Boolean)
     .filter((entry) => entry.title || entry.description || entry.day !== undefined);
+};
+
+const shouldHideCheckedOutBooking = (booking) => {
+  if (!booking || booking.stayStatus !== 'Checked-out') return false;
+
+  const checkedOutAt = parseDate(booking.stayCheckedOutAt);
+  if (!checkedOutAt) return false;
+
+  return Date.now() - checkedOutAt.getTime() >= CHECKED_OUT_HIDE_AFTER_MS;
 };
 
 // GET ALL TOURS FOR THIS MANAGER
@@ -687,18 +697,18 @@ exports.getStayRequests = async (req, res) => {
       ]
     };
 
-    if (!query.$or.length) {
-      return res.json({ success: true, count: 0, data: [] });
-    }
-
     if (status) {
       query.stayStatus = status;
     }
 
-    let requests = await Booking.find(query)
-      .populate('tourist', 'name email phone')
-      .populate('tourPackage', 'title destination')
-      .sort({ createdAt: -1 });
+    let requests = [];
+
+    if (query.$or.length) {
+      requests = await Booking.find(query)
+        .populate('tourist', 'name email phone')
+        .populate('tourPackage', 'title destination')
+        .sort({ createdAt: -1 });
+    }
 
     // Fallback: if there are no manager-linked matches, show generic tour stay requests
     // so the stay board does not appear empty for valid operational bookings.
@@ -717,6 +727,8 @@ exports.getStayRequests = async (req, res) => {
         .populate('tourPackage', 'title destination')
         .sort({ createdAt: -1 });
     }
+
+    requests = requests.filter((booking) => !shouldHideCheckedOutBooking(booking));
 
     return res.json({
       success: true,
@@ -1009,6 +1021,11 @@ exports.allocateStayForBooking = async (req, res) => {
       return res.status(400).json({ message: 'Invalid stay status.' });
     }
     booking.stayStatus = nextStayStatus;
+    if (nextStayStatus === 'Checked-out') {
+      booking.stayCheckedOutAt = new Date();
+    } else {
+      booking.stayCheckedOutAt = null;
+    }
 
     await booking.save();
 
@@ -1057,6 +1074,11 @@ exports.updateStayStatus = async (req, res) => {
     }
 
     booking.stayStatus = stayStatus;
+    if (stayStatus === 'Checked-out') {
+      booking.stayCheckedOutAt = new Date();
+    } else {
+      booking.stayCheckedOutAt = null;
+    }
     if (stayManagerNotes !== undefined) {
       booking.stayManagerNotes = String(stayManagerNotes || '').trim();
     }
@@ -1144,6 +1166,9 @@ exports.deleteStayAllocation = async (req, res) => {
     }
 
     booking.stayLastUpdatedBy = req.user.userId;
+    if (booking.stayStatus !== 'Checked-out') {
+      booking.stayCheckedOutAt = null;
+    }
     await booking.save();
 
     const updated = await Booking.findById(booking._id)

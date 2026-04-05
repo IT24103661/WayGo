@@ -198,6 +198,10 @@ const bookingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         default: null
+    },
+    stayCheckedOutAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

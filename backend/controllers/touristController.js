@@ -7,6 +7,24 @@ const Review = require('../models/Review');
 const FleetNotification = require('../models/FleetNotification');
 const TouristNotification = require('../models/TouristNotification');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^\d{11}$/;
+
+const cleanText = (value) => String(value || '').trim();
+
+const validatePickupTime = (value, fieldName = 'pickupTime') => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { ok: false, message: `${fieldName} must be a valid date.` };
+  }
+  if (parsed.getTime() < Date.now() + 5 * 60 * 1000) {
+    return { ok: false, message: `${fieldName} must be at least 5 minutes in the future.` };
+  }
+  return { ok: true, value: parsed };
+};
+
+const normalizeLocation = (value) => cleanText(value).toLowerCase();
+
 const releaseBookingResources = async (booking) => {
   if (!booking) return;
 
@@ -116,9 +134,34 @@ exports.updateProfile = async (req, res) => {
 
     if (!tourist) return res.status(404).json({ message: 'Tourist not found' });
 
-    tourist.name = name || tourist.name;
-    tourist.email = email || tourist.email;
-    if (phone) tourist.phone = phone;
+    if (name !== undefined) {
+      const nextName = cleanText(name);
+      if (nextName.length < 2 || nextName.length > 80) {
+        return res.status(400).json({ message: 'Name must be between 2 and 80 characters.' });
+      }
+      tourist.name = nextName;
+    }
+
+    if (email !== undefined) {
+      const nextEmail = cleanText(email).toLowerCase();
+      if (!EMAIL_REGEX.test(nextEmail) || nextEmail.length > 120) {
+        return res.status(400).json({ message: 'Enter a valid email address.' });
+      }
+
+      const existing = await User.findOne({ email: nextEmail, _id: { $ne: tourist._id } }).select('_id');
+      if (existing) {
+        return res.status(400).json({ message: 'Email already in use by another account.' });
+      }
+      tourist.email = nextEmail;
+    }
+
+    if (phone !== undefined) {
+      const nextPhone = cleanText(phone);
+      if (!PHONE_REGEX.test(nextPhone)) {
+        return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+      }
+      tourist.phone = nextPhone;
+    }
 
     const updatedTourist = await tourist.save();
     
@@ -190,14 +233,27 @@ exports.createBooking = async (req, res) => {
   try {
     const { tourId, date, members = 1, pickupLocation, dropoffLocation, totalPrice, packageOptions } = req.body;
 
-    if (!pickupLocation || !String(pickupLocation).trim()) {
+    const pickup = cleanText(pickupLocation);
+    const dropoff = dropoffLocation === undefined || dropoffLocation === null ? '' : cleanText(dropoffLocation);
+
+    if (!pickup) {
       return res.status(400).json({ message: 'pickupLocation is required.' });
     }
-
-    const pickupTime = date ? new Date(date) : new Date();
-    if (Number.isNaN(pickupTime.getTime())) {
-      return res.status(400).json({ message: 'date must be a valid date.' });
+    if (pickup.length < 3 || pickup.length > 180) {
+      return res.status(400).json({ message: 'pickupLocation must be between 3 and 180 characters.' });
     }
+    if (dropoff && dropoff.length > 180) {
+      return res.status(400).json({ message: 'dropoffLocation must be 180 characters or fewer.' });
+    }
+    if (dropoff && normalizeLocation(pickup) === normalizeLocation(dropoff)) {
+      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
+    }
+
+    const pickupValidation = date ? validatePickupTime(date, 'date') : { ok: true, value: new Date(Date.now() + 10 * 60 * 1000) };
+    if (!pickupValidation.ok) {
+      return res.status(400).json({ message: pickupValidation.message });
+    }
+    const pickupTime = pickupValidation.value;
 
     let tour = null;
     if (tourId && typeof tourId === 'string' && /^[a-f\d]{24}$/i.test(tourId)) {
@@ -205,23 +261,39 @@ exports.createBooking = async (req, res) => {
     }
 
     const parsedMembers = Number(members);
-    const safeMembers = Number.isFinite(parsedMembers) && parsedMembers > 0 ? parsedMembers : 1;
+    if (!Number.isFinite(parsedMembers) || parsedMembers < 1 || parsedMembers > 20) {
+      return res.status(400).json({ message: 'members must be a number between 1 and 20.' });
+    }
+    const safeMembers = parsedMembers;
 
     const calculatedPrice = tour
       ? Number(tour.price) * safeMembers
       : (Number(totalPrice) > 0 ? Number(totalPrice) : 12500);
 
     const sanitizedOptions = sanitizePackageOptions(packageOptions || {});
+    if (sanitizedOptions.checkInDate && Number.isNaN(sanitizedOptions.checkInDate.getTime())) {
+      return res.status(400).json({ message: 'packageOptions.checkInDate must be a valid date.' });
+    }
+    if (sanitizedOptions.checkOutDate && Number.isNaN(sanitizedOptions.checkOutDate.getTime())) {
+      return res.status(400).json({ message: 'packageOptions.checkOutDate must be a valid date.' });
+    }
+    if (sanitizedOptions.checkInDate && sanitizedOptions.checkOutDate && sanitizedOptions.checkOutDate <= sanitizedOptions.checkInDate) {
+      return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
+    }
+
     const finalPrice = sanitizedOptions.pricing.finalTotal > 0
       ? sanitizedOptions.pricing.finalTotal
       : calculatedPrice;
+    if (!Number.isFinite(finalPrice) || finalPrice <= 0 || finalPrice > 5000000) {
+      return res.status(400).json({ message: 'totalPrice must be greater than 0 and less than or equal to 5,000,000.' });
+    }
 
     const newBooking = await Booking.create({
       tourist: req.user.userId,
       bookingType: 'Tour',
       tourPackage: tour ? tour._id : null,
-      pickupLocation: String(pickupLocation).trim(),
-      dropoffLocation: dropoffLocation ? String(dropoffLocation).trim() : null,
+      pickupLocation: pickup,
+      dropoffLocation: dropoff || null,
       pickupTime,
       totalPrice: finalPrice,
       packageOptions: sanitizedOptions,
@@ -266,21 +338,31 @@ exports.createFleetBooking = async (req, res) => {
       return res.status(400).json({ message: 'pickupLocation, dropoffLocation and pickupTime are required.' });
     }
 
-    const parsedPickupTime = new Date(pickupTime);
-    if (Number.isNaN(parsedPickupTime.getTime())) {
-      return res.status(400).json({ message: 'pickupTime must be a valid date.' });
+    const pickup = cleanText(pickupLocation);
+    const dropoff = cleanText(dropoffLocation);
+    if (pickup.length < 3 || pickup.length > 180 || dropoff.length < 3 || dropoff.length > 180) {
+      return res.status(400).json({ message: 'pickupLocation and dropoffLocation must be between 3 and 180 characters.' });
+    }
+    if (normalizeLocation(pickup) === normalizeLocation(dropoff)) {
+      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
     }
 
+    const pickupValidation = validatePickupTime(pickupTime);
+    if (!pickupValidation.ok) {
+      return res.status(400).json({ message: pickupValidation.message });
+    }
+    const parsedPickupTime = pickupValidation.value;
+
     const price = Number(totalPrice);
-    if (Number.isNaN(price) || price < 0) {
-      return res.status(400).json({ message: 'totalPrice must be a valid non-negative number.' });
+    if (!Number.isFinite(price) || price <= 0 || price > 5000000) {
+      return res.status(400).json({ message: 'totalPrice must be greater than 0 and less than or equal to 5,000,000.' });
     }
 
     const newBooking = await Booking.create({
       tourist: req.user.userId,
       bookingType: 'Taxi',
-      pickupLocation: String(pickupLocation).trim(),
-      dropoffLocation: String(dropoffLocation).trim(),
+      pickupLocation: pickup,
+      dropoffLocation: dropoff,
       pickupTime: parsedPickupTime,
       totalPrice: price,
       status: 'Pending'
@@ -337,19 +419,35 @@ exports.updateFleetBooking = async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify a completed or cancelled fleet booking' });
     }
 
-    if (pickupLocation) booking.pickupLocation = String(pickupLocation).trim();
-    if (dropoffLocation) booking.dropoffLocation = String(dropoffLocation).trim();
-    if (pickupTime) {
-      const parsedPickupTime = new Date(pickupTime);
-      if (Number.isNaN(parsedPickupTime.getTime())) {
-        return res.status(400).json({ message: 'pickupTime must be a valid date.' });
+    if (pickupLocation !== undefined) {
+      const pickup = cleanText(pickupLocation);
+      if (pickup.length < 3 || pickup.length > 180) {
+        return res.status(400).json({ message: 'pickupLocation must be between 3 and 180 characters.' });
       }
-      booking.pickupTime = parsedPickupTime;
+      booking.pickupLocation = pickup;
+    }
+    if (dropoffLocation !== undefined) {
+      const dropoff = cleanText(dropoffLocation);
+      if (dropoff.length < 3 || dropoff.length > 180) {
+        return res.status(400).json({ message: 'dropoffLocation must be between 3 and 180 characters.' });
+      }
+      booking.dropoffLocation = dropoff;
+    }
+    if (normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)) {
+      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
+    }
+
+    if (pickupTime) {
+      const pickupValidation = validatePickupTime(pickupTime);
+      if (!pickupValidation.ok) {
+        return res.status(400).json({ message: pickupValidation.message });
+      }
+      booking.pickupTime = pickupValidation.value;
     }
     if (totalPrice !== undefined) {
       const price = Number(totalPrice);
-      if (Number.isNaN(price) || price < 0) {
-        return res.status(400).json({ message: 'totalPrice must be a valid non-negative number.' });
+      if (!Number.isFinite(price) || price <= 0 || price > 5000000) {
+        return res.status(400).json({ message: 'totalPrice must be greater than 0 and less than or equal to 5,000,000.' });
       }
       booking.totalPrice = price;
     }
@@ -558,14 +656,42 @@ exports.updateBooking = async (req, res) => {
         return res.status(400).json({ message: 'Cannot modify a completed or cancelled booking' });
     }
 
-    if (pickupLocation) booking.pickupLocation = pickupLocation;
-    if (dropoffLocation !== undefined) booking.dropoffLocation = dropoffLocation;
-    if (pickupTime) booking.pickupTime = pickupTime;
+    if (pickupLocation !== undefined) {
+      const pickup = cleanText(pickupLocation);
+      if (pickup.length < 3 || pickup.length > 180) {
+        return res.status(400).json({ message: 'pickupLocation must be between 3 and 180 characters.' });
+      }
+      booking.pickupLocation = pickup;
+    }
+
+    if (dropoffLocation !== undefined) {
+      const dropoff = cleanText(dropoffLocation);
+      if (dropoff && (dropoff.length < 3 || dropoff.length > 180)) {
+        return res.status(400).json({ message: 'dropoffLocation must be between 3 and 180 characters when provided.' });
+      }
+      booking.dropoffLocation = dropoff || null;
+    }
+
+    if (booking.dropoffLocation && normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)) {
+      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
+    }
+
+    if (pickupTime) {
+      const pickupValidation = validatePickupTime(pickupTime);
+      if (!pickupValidation.ok) {
+        return res.status(400).json({ message: pickupValidation.message });
+      }
+      booking.pickupTime = pickupValidation.value;
+    }
+
     if (totalPrice !== undefined && Number(totalPrice) > 0) {
       booking.totalPrice = Number(totalPrice);
+    } else if (totalPrice !== undefined) {
+      return res.status(400).json({ message: 'totalPrice must be a positive number.' });
     }
+
     if (packageOptions && typeof packageOptions === 'object') {
-      booking.packageOptions = sanitizePackageOptions({
+      const nextOptions = sanitizePackageOptions({
         ...(booking.packageOptions || {}),
         ...packageOptions,
         extras: {
@@ -577,6 +703,17 @@ exports.updateBooking = async (req, res) => {
           ...(packageOptions.pricing || {})
         }
       });
+
+      if (nextOptions.checkInDate && Number.isNaN(nextOptions.checkInDate.getTime())) {
+        return res.status(400).json({ message: 'packageOptions.checkInDate must be a valid date.' });
+      }
+      if (nextOptions.checkOutDate && Number.isNaN(nextOptions.checkOutDate.getTime())) {
+        return res.status(400).json({ message: 'packageOptions.checkOutDate must be a valid date.' });
+      }
+      if (nextOptions.checkInDate && nextOptions.checkOutDate && nextOptions.checkOutDate <= nextOptions.checkInDate) {
+        return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
+      }
+      booking.packageOptions = nextOptions;
     }
 
     const updatedBooking = await booking.save();
@@ -623,11 +760,26 @@ exports.getReviews = async (req, res) => {
 exports.createReview = async (req, res) => {
   try {
     const { tourName, rating, text } = req.body;
+
+    const safeTourName = cleanText(tourName || 'General Tour');
+    const safeText = cleanText(text);
+    const safeRating = Number(rating);
+
+    if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
+      return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+    }
+    if (!safeText || safeText.length < 10 || safeText.length > 1000) {
+      return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
+    }
+    if (safeTourName.length > 120) {
+      return res.status(400).json({ message: 'tourName should be 120 characters or fewer.' });
+    }
+
     const review = await Review.create({
       tourist: req.user.userId,
-      tourName: tourName || 'General Tour',
-      rating,
-      text
+      tourName: safeTourName,
+      rating: safeRating,
+      text: safeText
     });
     res.status(201).json(review);
   } catch (err) {
@@ -643,9 +795,27 @@ exports.updateReview = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     
-    if (req.body.rating) review.rating = req.body.rating;
-    if (req.body.text) review.text = req.body.text;
-    if (req.body.tourName) review.tourName = req.body.tourName;
+    if (req.body.rating !== undefined) {
+      const safeRating = Number(req.body.rating);
+      if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
+        return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+      }
+      review.rating = safeRating;
+    }
+    if (req.body.text !== undefined) {
+      const safeText = cleanText(req.body.text);
+      if (!safeText || safeText.length < 10 || safeText.length > 1000) {
+        return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
+      }
+      review.text = safeText;
+    }
+    if (req.body.tourName !== undefined) {
+      const safeTourName = cleanText(req.body.tourName || 'General Tour');
+      if (safeTourName.length > 120) {
+        return res.status(400).json({ message: 'tourName should be 120 characters or fewer.' });
+      }
+      review.tourName = safeTourName;
+    }
     
     await review.save();
     res.json(review);

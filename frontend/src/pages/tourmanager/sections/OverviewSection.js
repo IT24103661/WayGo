@@ -40,7 +40,7 @@ export default function OverviewSection() {
       value: `LKR ${metrics.completedRevenue.toLocaleString()}`,
       helper: `${metrics.completedBookings} completed bookings`,
       icon: MdTrendingUp,
-      accent: 'from-emerald-600 to-teal-500'
+      accent: 'from-cyan-600 to-sky-500'
     },
     {
       label: 'Total Bookings',
@@ -54,14 +54,14 @@ export default function OverviewSection() {
       value: `${metrics.avgRating || 0} / 5`,
       helper: `${stats?.totalReviews ?? 0} review signals`,
       icon: MdTour,
-      accent: 'from-emerald-500 to-teal-400'
+      accent: 'from-cyan-500 to-sky-400'
     },
     {
       label: 'Execution Health',
       value: `${metrics.onTrackRate}%`,
       helper: 'Non-cancelled booking ratio',
       icon: MdMap,
-      accent: 'from-teal-500 to-cyan-400'
+      accent: 'from-sky-500 to-cyan-400'
     }
   ];
 
@@ -88,7 +88,7 @@ export default function OverviewSection() {
       value: metrics.pipeline.enRoute,
       hint: 'Tours in progress',
       icon: MdMap,
-      style: 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      style: 'border-cyan-200 bg-cyan-50 text-cyan-800'
     },
     {
       key: 'scheduled',
@@ -103,34 +103,34 @@ export default function OverviewSection() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold tracking-[0.3em] text-emerald-700 uppercase">Overview</p>
-        <h2 className="text-2xl font-bold text-emerald-950">Tour Manager Overview</h2>
-        <p className="text-emerald-700/80">Monitor premium tours, quotes, and performance at a glance.</p>
+        <p className="text-xs font-semibold tracking-[0.3em] text-cyan-700 uppercase">Overview</p>
+        <h2 className="text-2xl font-bold text-cyan-950">Tour Manager Overview</h2>
+        <p className="text-cyan-700/80">Monitor premium tours, quotes, and performance at a glance.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.3)] p-5">
+            <div key={card.label} className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.3)] p-5">
               <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${card.accent} text-white flex items-center justify-center shadow-lg`}>
                 <Icon className="text-2xl" />
               </div>
-              <p className="mt-4 text-sm font-semibold text-emerald-900">{card.label}</p>
-              <p className="text-2xl font-bold text-emerald-950 mt-1">{card.value}</p>
-              <p className="text-xs text-emerald-700/70 mt-2">{card.helper}</p>
+              <p className="mt-4 text-sm font-semibold text-cyan-900">{card.label}</p>
+              <p className="text-2xl font-bold text-cyan-950 mt-1">{card.value}</p>
+              <p className="text-xs text-cyan-700/70 mt-2">{card.helper}</p>
             </div>
           );
         })}
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.3)] p-6">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.3)] p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-emerald-950">Booking Pipeline</h3>
-            <p className="text-sm text-emerald-700/80 mt-1">Track progression from pending requests to active operations.</p>
+            <h3 className="text-lg font-bold text-cyan-950">Booking Pipeline</h3>
+            <p className="text-sm text-cyan-700/80 mt-1">Track progression from pending requests to active operations.</p>
           </div>
-          <span className="text-xs px-3 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold">
+          <span className="text-xs px-3 py-1 rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 font-semibold">
             Total Bookings: {Array.isArray(bookings) ? bookings.length : 0}
           </span>
         </div>
@@ -153,18 +153,18 @@ export default function OverviewSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-emerald-100 via-teal-50 to-white rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.3)] p-6">
-          <h3 className="text-lg font-bold text-emerald-950">Operational Pulse</h3>
-          <p className="text-sm text-emerald-700/80 mt-2">Your premium operations quality this cycle.</p>
-          <div className="mt-4 flex items-center justify-between text-sm text-emerald-800">
+        <div className="bg-gradient-to-br from-cyan-100 via-sky-50 to-white rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.3)] p-6">
+          <h3 className="text-lg font-bold text-cyan-950">Operational Pulse</h3>
+          <p className="text-sm text-cyan-700/80 mt-2">Your premium operations quality this cycle.</p>
+          <div className="mt-4 flex items-center justify-between text-sm text-cyan-800">
             <span>Active Tours</span>
             <span className="font-semibold">{stats?.activeTours ?? 0}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-sm text-emerald-800">
+          <div className="mt-2 flex items-center justify-between text-sm text-cyan-800">
             <span>Total Bookings</span>
             <span className="font-semibold">{stats?.totalBookings ?? 0}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-sm text-emerald-800">
+          <div className="mt-2 flex items-center justify-between text-sm text-cyan-800">
             <span>Completion Rate</span>
             <span className="font-semibold">
               {Array.isArray(bookings) && bookings.length > 0
@@ -174,17 +174,17 @@ export default function OverviewSection() {
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.3)] p-6">
-          <h3 className="text-lg font-bold text-emerald-950">Next Smart Actions</h3>
-          <p className="text-sm text-emerald-700/80 mt-2">Focus these tasks to improve conversion and quality.</p>
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.3)] p-6">
+          <h3 className="text-lg font-bold text-cyan-950">Next Smart Actions</h3>
+          <p className="text-sm text-cyan-700/80 mt-2">Focus these tasks to improve conversion and quality.</p>
           <ul className="mt-4 space-y-3 text-sm">
-            <li className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-emerald-900">
+            <li className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-cyan-900">
               Prioritize {metrics.pipeline.pending} pending booking requests in the next sprint window.
             </li>
-            <li className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-emerald-900">
+            <li className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-cyan-900">
               Move accepted bookings quickly into dispatch and stay planning stages.
             </li>
-            <li className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-emerald-900">
+            <li className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-cyan-900">
               Review low-performing tours and pause those with repeated cancellations.
             </li>
           </ul>

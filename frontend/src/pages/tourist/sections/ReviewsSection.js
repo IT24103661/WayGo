@@ -8,6 +8,7 @@ export default function ReviewsSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentReview, setCurrentReview] = useState(null);
   const [formData, setFormData] = useState({ tourName: "", rating: 5, text: "" });
+  const [formError, setFormError] = useState("");
 
   const fetchReviews = async () => {
     try {
@@ -28,13 +29,32 @@ export default function ReviewsSection() {
   const openCreateModal = () => {
     setCurrentReview(null);
     setFormData({ tourName: "", rating: 5, text: "" });
+    setFormError("");
     setIsModalOpen(true);
   };
 
   const openEditModal = (review) => {
     setCurrentReview(review);
     setFormData({ tourName: review.tourName, rating: review.rating, text: review.text });
+    setFormError("");
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const tourName = String(formData.tourName || "").trim();
+    const text = String(formData.text || "").trim();
+    const rating = Number(formData.rating);
+
+    if (!tourName || tourName.length > 120) {
+      return "Tour/Activity name is required and should be 120 characters or fewer.";
+    }
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return "Rating must be between 1 and 5.";
+    }
+    if (text.length < 10 || text.length > 1000) {
+      return "Review text must be between 10 and 1000 characters.";
+    }
+    return "";
   };
 
   const handleDelete = async (id) => {
@@ -51,11 +71,26 @@ export default function ReviewsSection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setFormError("");
     try {
       if (currentReview) {
-        await api.updateReview(currentReview._id, formData);
+        await api.updateReview(currentReview._id, {
+          tourName: formData.tourName.trim(),
+          rating: Number(formData.rating),
+          text: formData.text.trim()
+        });
       } else {
-        await api.createReview(formData);
+        await api.createReview({
+          tourName: formData.tourName.trim(),
+          rating: Number(formData.rating),
+          text: formData.text.trim()
+        });
       }
       setIsModalOpen(false);
       fetchReviews();
@@ -169,6 +204,7 @@ export default function ReviewsSection() {
                   placeholder="Share your experience..."
                 />
               </div>
+              {formError && <p className="text-sm font-semibold text-rose-600">{formError}</p>}
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"

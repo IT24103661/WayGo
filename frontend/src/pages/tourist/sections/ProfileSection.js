@@ -4,6 +4,7 @@ import { touristAPI } from '../../../services/touristAPI';
 
 export default function ProfileSection() {
   const [profile, setProfile] = useState({ name: '', email: '', phone: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -29,11 +30,40 @@ export default function ProfileSection() {
   };
 
   const handleChange = (e) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 11) : value;
+    setProfile({ ...profile, [name]: nextValue });
+    setFieldErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const validateProfile = () => {
+    const nextErrors = {};
+    const name = profile.name.trim();
+    const email = profile.email.trim();
+    const phone = profile.phone.trim();
+
+    if (name.length < 2 || name.length > 80) {
+      nextErrors.name = 'Name must be between 2 and 80 characters.';
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) {
+      nextErrors.email = 'Enter a valid email address.';
+    }
+
+    if (!/^\d{11}$/.test(phone)) {
+      nextErrors.phone = 'Phone number must contain exactly 11 digits.';
+    }
+
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateProfile()) {
+      setMessage('Please fix the highlighted fields.');
+      return;
+    }
     setIsSaving(true);
     setMessage('');
     try {
@@ -86,6 +116,7 @@ export default function ProfileSection() {
                 required
               />
             </div>
+            {fieldErrors.name && <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p>}
           </div>
 
           <div>
@@ -101,6 +132,7 @@ export default function ProfileSection() {
                 required
               />
             </div>
+            {fieldErrors.email && <p className="mt-1 text-xs text-rose-600">{fieldErrors.email}</p>}
           </div>
 
           <div>
@@ -113,8 +145,12 @@ export default function ProfileSection() {
                 value={profile.phone}
                 onChange={handleChange}
                 className="bg-transparent border-none outline-none w-full text-zinc-900 font-medium"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={11}
                />
             </div>
+            {fieldErrors.phone && <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>}
           </div>
 
           <div className="pt-4 border-t border-stone-100 flex justify-end">

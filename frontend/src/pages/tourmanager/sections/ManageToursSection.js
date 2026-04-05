@@ -39,7 +39,7 @@ export default function ManageToursSection() {
   };
 
   const getHealthStyles = (status) => {
-    if (status === 'Healthy') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (status === 'Healthy') return 'bg-cyan-100 text-cyan-700 border-cyan-200';
     if (status === 'Watch') return 'bg-amber-100 text-amber-700 border-amber-200';
     return 'bg-rose-100 text-rose-700 border-rose-200';
   };
@@ -240,115 +240,115 @@ export default function ManageToursSection() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold tracking-[0.3em] text-emerald-700 uppercase">Manage Tours</p>
-        <h2 className="text-2xl font-bold text-emerald-950">Create Custom Tour</h2>
-        <p className="text-emerald-700/80">Manage standalone custom tours tailored for specific types of travelers.</p>
+        <p className="text-xs font-semibold tracking-[0.3em] text-cyan-700 uppercase">Manage Tours</p>
+        <h2 className="text-2xl font-bold text-cyan-950">Create Custom Tour</h2>
+        <p className="text-cyan-700/80">Manage standalone custom tours tailored for specific types of travelers.</p>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.35)] p-6">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.35)] p-6">
         <form onSubmit={handleCreateSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Tour Title</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Tour Title</label>
               <input
                 type="text"
                 required
                 value={form.title}
                 onChange={handleChange('title')}
                 placeholder="Serene Beach Getaway"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Destinations</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Destinations</label>
               <input
                 type="text"
                 required
                 value={form.destination}
                 onChange={handleChange('destination')}
                 placeholder="South Coast, Sri Lanka"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Price (LKR)</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Price (LKR)</label>
               <input
                 type="number"
                 required
                 value={form.price}
                 onChange={handleChange('price')}
                 placeholder="85000"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Duration (Days)</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Duration (Days)</label>
               <input
                 type="number"
                 required
                 value={form.durationDays}
                 onChange={handleChange('durationDays')}
                 placeholder="3"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Max Group Size</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Max Group Size</label>
               <input
                 type="number"
                 value={form.maxGroupSize}
                 onChange={handleChange('maxGroupSize')}
                 placeholder="10"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-emerald-900 mb-2">Description</label>
+            <label className="block text-sm font-semibold text-cyan-900 mb-2">Description</label>
             <textarea
               rows="3"
               required
               value={form.description}
               onChange={handleChange('description')}
               placeholder="Highlight the main attractions and vibe of this tour..."
-              className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+              className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Included (Separate by •)</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Included (Separate by •)</label>
               <input
                 type="text"
                 value={form.includes}
                 onChange={handleChange('includes')}
                 placeholder="Hotel • Breakfast • Transport"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Excluded (Separate by •)</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Excluded (Separate by •)</label>
               <input
                 type="text"
                 value={form.excludes}
                 onChange={handleChange('excludes')}
                 placeholder="Flights • Lunch • Dinner"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
           </div>
 
           {message && (
-            <p className="text-sm font-semibold text-emerald-700">{message}</p>
+            <p className="text-sm font-semibold text-cyan-700">{message}</p>
           )}
 
           <div className="flex gap-4">
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-600 text-white font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60"
             >
               <MdAddCircle className="text-xl" />
               {loading ? 'Saving...' : 'Create Tour'}
@@ -360,12 +360,12 @@ export default function ManageToursSection() {
       {/* Existing Tours List */}
       <div className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <h3 className="text-xl font-bold text-emerald-950">Existing Tours</h3>
+          <h3 className="text-xl font-bold text-cyan-950">Existing Tours</h3>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={healthFilter}
               onChange={(event) => setHealthFilter(event.target.value)}
-              className="px-3 py-2 border border-emerald-200 rounded-xl text-sm bg-white"
+              className="px-3 py-2 border border-cyan-200 rounded-xl text-sm bg-white"
             >
               <option value="All">All Health States</option>
               <option value="Healthy">Healthy</option>
@@ -375,7 +375,7 @@ export default function ManageToursSection() {
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
-              className="px-3 py-2 border border-emerald-200 rounded-xl text-sm bg-white"
+              className="px-3 py-2 border border-cyan-200 rounded-xl text-sm bg-white"
             >
               <option value="health">Sort: Health</option>
               <option value="rating">Sort: Rating</option>
@@ -386,9 +386,9 @@ export default function ManageToursSection() {
         {displayTours.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayTours.map(tour => (
-              <div key={tour._id} className="bg-white rounded-3xl shadow-[0_20px_50px_-40px_rgba(16,185,129,0.2)] border border-emerald-100 group flex flex-col hover:-translate-y-1 transition-all duration-300">
-                <div className="h-40 bg-emerald-100 rounded-t-3xl overflow-hidden relative">
-                  <div className="absolute inset-0 bg-emerald-900/20 group-hover:bg-transparent transition-colors" />
+              <div key={tour._id} className="bg-white rounded-3xl shadow-[0_20px_50px_-40px_rgba(6,182,212,0.2)] border border-cyan-100 group flex flex-col hover:-translate-y-1 transition-all duration-300">
+                <div className="h-40 bg-cyan-100 rounded-t-3xl overflow-hidden relative">
+                  <div className="absolute inset-0 bg-cyan-900/20 group-hover:bg-transparent transition-colors" />
                   <img
                     src={`https://source.unsplash.com/600x400/?srilanka,${encodeURIComponent(tour.destination || tour.title || 'travel')}`}
                     alt={tour.title}
@@ -396,46 +396,46 @@ export default function ManageToursSection() {
                     onError={(e) => { e.target.src = 'https://source.unsplash.com/600x400/?srilanka,nature'; }}
                   />
                   <div className="absolute top-3 right-3">
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md ${tour.isActive ? 'bg-white/80 text-emerald-700' : 'bg-white/80 text-gray-600'}`}>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md ${tour.isActive ? 'bg-white/80 text-cyan-700' : 'bg-white/80 text-gray-600'}`}>
                       {tour.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col">
-                  <h4 className="text-lg font-bold text-emerald-950 leading-tight mb-2">{tour.title}</h4>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mb-3 uppercase tracking-wide">
+                  <h4 className="text-lg font-bold text-cyan-950 leading-tight mb-2">{tour.title}</h4>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-600 mb-3 uppercase tracking-wide">
                     <span>{tour.destination}</span>
                     <span>•</span>
                     <span>{tour.durationDays} Days</span>
                   </div>
 
-                  <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 px-3 py-2">
+                  <div className="mb-3 rounded-2xl border border-cyan-100 bg-cyan-50/50 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs uppercase tracking-wide font-bold text-emerald-800">Tour Health Score</p>
+                      <p className="text-xs uppercase tracking-wide font-bold text-cyan-800">Tour Health Score</p>
                       <span className={`text-[11px] font-bold px-2 py-1 rounded-full border ${getHealthStyles(tour.healthStatus)}`}>
                         {tour.healthStatus}
                       </span>
                     </div>
-                    <p className="text-xl font-black text-emerald-950 mt-1">{tour.healthScore}/100</p>
-                    <p className="text-[11px] text-emerald-700/80 mt-1">
+                    <p className="text-xl font-black text-cyan-950 mt-1">{tour.healthScore}/100</p>
+                    <p className="text-[11px] text-cyan-700/80 mt-1">
                       {tour.healthMeta.totalBookings} bookings • {tour.healthMeta.cancellationRatio}% cancellation • Avg LKR {tour.healthMeta.avgBookingValue.toLocaleString()}
                     </p>
                   </div>
                   
-                  <p className="text-sm text-emerald-900/70 line-clamp-2 mb-4 flex-1">{tour.description}</p>
+                  <p className="text-sm text-cyan-900/70 line-clamp-2 mb-4 flex-1">{tour.description}</p>
                   
-                  <div className="flex items-end justify-between mb-4 border-t border-emerald-50 pt-4 mt-auto">
+                  <div className="flex items-end justify-between mb-4 border-t border-cyan-50 pt-4 mt-auto">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600">Price</p>
-                      <p className="text-lg font-bold text-emerald-950">LKR {tour.price.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-cyan-600">Price</p>
+                      <p className="text-lg font-bold text-cyan-950">LKR {tour.price.toLocaleString()}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-emerald-50">
+                  <div className="flex items-center gap-2 pt-2 border-t border-cyan-50">
                     <button 
                       onClick={() => handleEdit(tour)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors font-semibold text-sm"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-cyan-50 text-cyan-700 rounded-xl hover:bg-cyan-100 transition-colors font-semibold text-sm"
                     >
                       <MdEdit /> Edit
                     </button>
@@ -448,7 +448,7 @@ export default function ManageToursSection() {
                   </div>
                   <button
                     onClick={() => handleToggleActive(tour)}
-                    className={`mt-2 w-full py-2 rounded-xl text-sm font-semibold transition-colors ${tour.isActive ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                    className={`mt-2 w-full py-2 rounded-xl text-sm font-semibold transition-colors ${tour.isActive ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'}`}
                   >
                     {tour.isActive ? 'Pause Low Performer' : 'Activate Tour'}
                   </button>
@@ -457,24 +457,24 @@ export default function ManageToursSection() {
             ))}
           </div>
         ) : (
-          <div className="bg-emerald-50/50 rounded-3xl p-8 border border-emerald-100 text-center">
-            <p className="text-emerald-700 font-medium">No custom tours created yet.</p>
+          <div className="bg-cyan-50/50 rounded-3xl p-8 border border-cyan-100 text-center">
+            <p className="text-cyan-700 font-medium">No custom tours created yet.</p>
           </div>
         )}
       </div>
 
       {editModalOpen && (
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm px-4 py-8 overflow-y-auto" onClick={resetEditModal}>
-          <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-emerald-200 shadow-[0_24px_60px_-32px_rgba(16,185,129,0.45)] p-6" onClick={(event) => event.stopPropagation()}>
+          <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-cyan-200 shadow-[0_24px_60px_-32px_rgba(6,182,212,0.45)] p-6" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-bold text-emerald-950">Edit Custom Tour</h3>
-                <p className="text-sm text-emerald-700/80 mt-1">Update your selected tour details and save changes.</p>
+                <h3 className="text-xl font-bold text-cyan-950">Edit Custom Tour</h3>
+                <p className="text-sm text-cyan-700/80 mt-1">Update your selected tour details and save changes.</p>
               </div>
               <button
                 type="button"
                 onClick={resetEditModal}
-                className="p-2 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                className="p-2 rounded-xl border border-cyan-200 text-cyan-700 hover:bg-cyan-50"
               >
                 <MdClose className="text-lg" />
               </button>
@@ -483,84 +483,84 @@ export default function ManageToursSection() {
             <form onSubmit={handleUpdateSubmit} className="space-y-6 mt-5">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Tour Title</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Tour Title</label>
                   <input
                     type="text"
                     required
                     value={editForm.title}
                     onChange={handleEditChange('title')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Destinations</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Destinations</label>
                   <input
                     type="text"
                     required
                     value={editForm.destination}
                     onChange={handleEditChange('destination')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Price (LKR)</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Price (LKR)</label>
                   <input
                     type="number"
                     required
                     value={editForm.price}
                     onChange={handleEditChange('price')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Duration (Days)</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Duration (Days)</label>
                   <input
                     type="number"
                     required
                     value={editForm.durationDays}
                     onChange={handleEditChange('durationDays')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Max Group Size</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Max Group Size</label>
                   <input
                     type="number"
                     value={editForm.maxGroupSize}
                     onChange={handleEditChange('maxGroupSize')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-emerald-900 mb-2">Description</label>
+                <label className="block text-sm font-semibold text-cyan-900 mb-2">Description</label>
                 <textarea
                   rows="3"
                   required
                   value={editForm.description}
                   onChange={handleEditChange('description')}
-                  className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                  className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                 />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Included (Separate by •)</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Included (Separate by •)</label>
                   <input
                     type="text"
                     value={editForm.includes}
                     onChange={handleEditChange('includes')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Excluded (Separate by •)</label>
+                  <label className="block text-sm font-semibold text-cyan-900 mb-2">Excluded (Separate by •)</label>
                   <input
                     type="text"
                     value={editForm.excludes}
                     onChange={handleEditChange('excludes')}
-                    className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                    className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
                 </div>
               </div>
@@ -569,7 +569,7 @@ export default function ManageToursSection() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-600 text-white font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60"
                 >
                   <MdEdit className="text-lg" />
                   {loading ? 'Saving...' : 'Save Changes'}

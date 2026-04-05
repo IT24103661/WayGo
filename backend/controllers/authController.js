@@ -39,6 +39,12 @@ exports.registerUser = async (req, res) => {
         if (!name || !email || !password || !phone) {
             return res.status(400).json({ message: 'Name, email, password and phone are all required.' });
         }
+
+        const normalizedPhone = String(phone).trim();
+        if (!/^\d{11}$/.test(normalizedPhone)) {
+            return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+        }
+
         if (password.length < 6) {
             return res.status(400).json({ message: 'Password must be at least 6 characters.' });
         }
@@ -84,7 +90,7 @@ exports.registerUser = async (req, res) => {
             name:     name.trim(),
             email:    email.toLowerCase().trim(),
             password: hashedPassword,
-            phone:    phone.trim(),
+            phone:    normalizedPhone,
             role:     role || 'Tourist',
         });
 
@@ -227,7 +233,13 @@ exports.updateProfile = async (req, res) => {
         }
 
         if (name !== undefined) user.name = String(name).trim();
-        if (phone !== undefined) user.phone = String(phone).trim();
+        if (phone !== undefined) {
+            const normalizedPhone = String(phone).trim();
+            if (!/^\d{11}$/.test(normalizedPhone)) {
+                return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+            }
+            user.phone = normalizedPhone;
+        }
         if (company !== undefined) user.company = String(company).trim();
         if (depot !== undefined) user.depot = String(depot).trim();
         if (region !== undefined) user.region = String(region).trim();
@@ -248,7 +260,51 @@ exports.updateProfile = async (req, res) => {
 };
 
 // ─────────────────────────────────────
-// 5. DELETE PROFILE (protected)
+// 5. CHANGE PASSWORD (protected)
+// ─────────────────────────────────────
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: 'Current password and new password are required.' });
+        }
+
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters.' });
+        }
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const isCurrentMatch = await bcrypt.compare(String(currentPassword), user.password);
+        if (!isCurrentMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect.' });
+        }
+
+        const isSameAsCurrent = await bcrypt.compare(String(newPassword), user.password);
+        if (isSameAsCurrent) {
+            return res.status(400).json({ message: 'New password must be different from the current password.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(String(newPassword), salt);
+        await user.save();
+
+        return res.json({
+            success: true,
+            message: 'Password updated successfully.'
+        });
+    } catch (error) {
+        console.error('ChangePassword error:', error);
+        return res.status(500).json({ message: 'Server error updating password.' });
+    }
+};
+
+// ─────────────────────────────────────
+// 6. DELETE PROFILE (protected)
 // ─────────────────────────────────────
 exports.deleteProfile = async (req, res) => {
     try {

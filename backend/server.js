@@ -22,6 +22,10 @@ require('./models/SupportRequest');
 require('./models/FleetNotification');
 require('./models/TouristNotification');
 require('./models/StayInventory');
+require('./models/PlatformConfig');
+require('./models/RefundRequest');
+require('./models/AdminBan');
+require('./models/AdminAuditLog');
 const DriverSalary = require('./models/DriverSalary');
 
 // Routes
@@ -30,12 +34,14 @@ const tourManagerRoutes = require('./routes/tourManagerRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const fleetManagerRoutes = require('./routes/fleetManagerRoutes');
 const touristRoutes = require('./routes/touristRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 app.use('/api/users', authRoutes);
 app.use('/api/tourmanager', tourManagerRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/fleetmanager', fleetManagerRoutes);
 app.use('/api/tourist', touristRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Keep API responses consistently JSON to avoid frontend parse crashes.
 app.use('/api', (req, res) => {

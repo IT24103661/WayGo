@@ -88,81 +88,81 @@ export default function CreatePackageSection() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold tracking-[0.3em] text-emerald-700 uppercase">Manage Packages</p>
-        <h2 className="text-2xl font-bold text-emerald-950">{editingId ? 'Edit Tour Package' : 'Design a Signature Tour'}</h2>
-        <p className="text-emerald-700/80">Craft premium, multi-day experiences for high-value travelers.</p>
+        <p className="text-xs font-semibold tracking-[0.3em] text-cyan-700 uppercase">Manage Packages</p>
+        <h2 className="text-2xl font-bold text-cyan-950">{editingId ? 'Edit Tour Package' : 'Design a Signature Tour'}</h2>
+        <p className="text-cyan-700/80">Craft premium, multi-day experiences for high-value travelers.</p>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-200 shadow-[0_20px_50px_-40px_rgba(16,185,129,0.35)] p-6">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-cyan-200 shadow-[0_20px_50px_-40px_rgba(6,182,212,0.35)] p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Package Title</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Package Title</label>
               <input
                 type="text"
                 required
                 value={form.title}
                 onChange={handleChange('title')}
                 placeholder="Emerald Highlands Expedition"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Flat Price</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Flat Price</label>
               <input
                 type="number"
                 required
                 value={form.flatPrice}
                 onChange={handleChange('flatPrice')}
                 placeholder="120000"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-emerald-900 mb-2">Duration (Days)</label>
+              <label className="block text-sm font-semibold text-cyan-900 mb-2">Duration (Days)</label>
               <input
                 type="number"
                 required
                 value={form.durationDays}
                 onChange={handleChange('durationDays')}
                 placeholder="4"
-                className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-emerald-900 mb-2">Description</label>
+            <label className="block text-sm font-semibold text-cyan-900 mb-2">Description</label>
             <textarea
               rows="4"
               required
               value={form.description}
               onChange={handleChange('description')}
               placeholder="Describe the journey, premium services, and exclusivity..."
-              className="w-full px-4 py-3 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+              className="w-full px-4 py-3 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-emerald-900 mb-2">Itinerary Stops</label>
+            <label className="block text-sm font-semibold text-cyan-900 mb-2">Itinerary Stops</label>
             <input
               type="text"
               value={form.itineraryStops}
               onChange={handleChange('itineraryStops')}
               placeholder="Nuwara Eliya • Ella • Yala • Galle"
-              className="w-full px-4 py-2 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+              className="w-full px-4 py-2 border border-cyan-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
             />
           </div>
 
           {message && (
-            <p className="text-sm font-semibold text-emerald-700">{message}</p>
+            <p className="text-sm font-semibold text-cyan-700">{message}</p>
           )}
 
           <div className="flex gap-4">
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-600 text-white font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60"
             >
               <MdAddCircle className="text-xl" />
               {loading ? 'Saving...' : editingId ? 'Update Package' : 'Publish Package'}
@@ -187,13 +187,13 @@ export default function CreatePackageSection() {
 
       {/* Existing Packages List */}
       <div className="mt-10">
-        <h3 className="text-xl font-bold text-emerald-950 mb-6">Existing Packages</h3>
+        <h3 className="text-xl font-bold text-cyan-950 mb-6">Existing Packages</h3>
         {packages && packages.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {packages.map(pkg => (
-              <div key={pkg._id} className="bg-white rounded-3xl shadow-[0_20px_50px_-40px_rgba(16,185,129,0.2)] border border-emerald-100 group flex flex-col hover:-translate-y-1 transition-all duration-300">
-                <div className="h-40 bg-emerald-100 rounded-t-3xl overflow-hidden relative">
-                  <div className="absolute inset-0 bg-emerald-900/20 group-hover:bg-transparent transition-colors" />
+              <div key={pkg._id} className="bg-white rounded-3xl shadow-[0_20px_50px_-40px_rgba(6,182,212,0.2)] border border-cyan-100 group flex flex-col hover:-translate-y-1 transition-all duration-300">
+                <div className="h-40 bg-cyan-100 rounded-t-3xl overflow-hidden relative">
+                  <div className="absolute inset-0 bg-cyan-900/20 group-hover:bg-transparent transition-colors" />
                   <img
                     src={`https://source.unsplash.com/600x400/?srilanka,${encodeURIComponent(pkg.title || 'travel')}`}
                     alt={pkg.title}
@@ -203,24 +203,24 @@ export default function CreatePackageSection() {
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col">
-                  <h4 className="text-lg font-bold text-emerald-950 leading-tight mb-2">{pkg.title}</h4>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mb-3 uppercase tracking-wide">
+                  <h4 className="text-lg font-bold text-cyan-950 leading-tight mb-2">{pkg.title}</h4>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-600 mb-3 uppercase tracking-wide">
                     <span>{pkg.durationDays} Days Duration</span>
                   </div>
                   
-                  <p className="text-sm text-emerald-900/70 line-clamp-2 mb-4 flex-1">{pkg.description}</p>
+                  <p className="text-sm text-cyan-900/70 line-clamp-2 mb-4 flex-1">{pkg.description}</p>
                   
-                  <div className="flex items-end justify-between mb-4 border-t border-emerald-50 pt-4 mt-auto">
+                  <div className="flex items-end justify-between mb-4 border-t border-cyan-50 pt-4 mt-auto">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600">Flat Price</p>
-                      <p className="text-lg font-bold text-emerald-950">LKR {pkg.flatPrice.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-cyan-600">Flat Price</p>
+                      <p className="text-lg font-bold text-cyan-950">LKR {pkg.flatPrice.toLocaleString()}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-emerald-50">
+                  <div className="flex items-center gap-2 pt-2 border-t border-cyan-50">
                     <button 
                       onClick={() => handleEdit(pkg)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors font-semibold text-sm"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-cyan-50 text-cyan-700 rounded-xl hover:bg-cyan-100 transition-colors font-semibold text-sm"
                     >
                       <MdEdit /> Edit
                     </button>
@@ -236,8 +236,8 @@ export default function CreatePackageSection() {
             ))}
           </div>
         ) : (
-          <div className="bg-emerald-50/50 rounded-3xl p-8 border border-emerald-100 text-center">
-            <p className="text-emerald-700 font-medium">No packages created yet.</p>
+          <div className="bg-cyan-50/50 rounded-3xl p-8 border border-cyan-100 text-center">
+            <p className="text-cyan-700 font-medium">No packages created yet.</p>
           </div>
         )}
       </div>
