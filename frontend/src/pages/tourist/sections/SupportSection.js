@@ -16,6 +16,24 @@ const SUPPORT_CHANNELS = [
   { icon: MdAccessTime, label: 'Hours', value: '24/7 Available', color: 'emerald' },
 ];
 
+const SUPPORT_CATEGORIES = ['Booking Issue', 'Payment Issue', 'Driver/Vehicle Issue', 'General Inquiry', 'Complaint'];
+
+const validateSupportInput = ({ subject, message, category }) => {
+  const safeSubject = String(subject || '').trim();
+  const safeMessage = String(message || '').trim();
+
+  if (!safeSubject || safeSubject.length < 5 || safeSubject.length > 120) {
+    return 'Subject must be between 5 and 120 characters.';
+  }
+  if (!safeMessage || safeMessage.length < 10 || safeMessage.length > 1200) {
+    return 'Message must be between 10 and 1200 characters.';
+  }
+  if (!SUPPORT_CATEGORIES.includes(category)) {
+    return 'Please select a valid category.';
+  }
+  return '';
+};
+
 export default function SupportSection() {
   const { requests, loading, error, createRequest, updateRequest, deleteRequest } = useTouristSupport();
   const [form, setForm] = useState({
@@ -58,12 +76,14 @@ export default function SupportSection() {
     e.preventDefault();
     setMessage('');
 
-    const subject = form.subject.trim();
-    const body = form.message.trim();
-    if (!subject || !body) {
-      setMessage('Please enter subject and message.');
+    const validationError = validateSupportInput(form);
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
+
+    const subject = form.subject.trim();
+    const body = form.message.trim();
 
     try {
       await createRequest({
@@ -93,12 +113,14 @@ export default function SupportSection() {
     e.preventDefault();
     setMessage('');
 
-    const subject = editForm.subject.trim();
-    const body = editForm.message.trim();
-    if (!subject || !body) {
-      setMessage('Please enter subject and message.');
+    const validationError = validateSupportInput(editForm);
+    if (validationError) {
+      setMessage(validationError);
       return;
     }
+
+    const subject = editForm.subject.trim();
+    const body = editForm.message.trim();
 
     try {
       await updateRequest(editingRequestId, {
@@ -164,11 +186,9 @@ export default function SupportSection() {
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option>Booking Issue</option>
-              <option>Payment Issue</option>
-              <option>Driver/Vehicle Issue</option>
-              <option>General Inquiry</option>
-              <option>Complaint</option>
+              {SUPPORT_CATEGORIES.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -264,11 +284,9 @@ export default function SupportSection() {
                   onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option>Booking Issue</option>
-                  <option>Payment Issue</option>
-                  <option>Driver/Vehicle Issue</option>
-                  <option>General Inquiry</option>
-                  <option>Complaint</option>
+                  {SUPPORT_CATEGORIES.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
                 </select>
               </div>
 

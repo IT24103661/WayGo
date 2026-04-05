@@ -118,6 +118,49 @@ const getTimelineStep = (status) => {
   return 0;
 };
 
+const validateManageForm = (form, isTour) => {
+  const pickup = String(form.pickupLocation || '').trim();
+  const dropoff = String(form.dropoffLocation || '').trim();
+
+  if (!pickup || pickup.length < 3 || pickup.length > 180) {
+    return 'Pickup location must be between 3 and 180 characters.';
+  }
+  if (dropoff && (dropoff.length < 3 || dropoff.length > 180)) {
+    return 'Dropoff location must be between 3 and 180 characters.';
+  }
+  if (pickup && dropoff && pickup.toLowerCase() === dropoff.toLowerCase()) {
+    return 'Pickup and dropoff locations cannot be the same.';
+  }
+
+  const pickupAt = new Date(form.pickupTime).getTime();
+  if (!pickupAt || Number.isNaN(pickupAt)) {
+    return 'Pickup time must be a valid date and time.';
+  }
+  if (pickupAt < Date.now() + 5 * 60 * 1000) {
+    return 'Pickup time must be at least 5 minutes in the future.';
+  }
+
+  if (isTour) {
+    const adults = Number(form.adults || 0);
+    const children = Number(form.children || 0);
+    const roomCount = Number(form.roomCount || 0);
+    if (!Number.isInteger(adults) || adults < 1 || adults > 20) {
+      return 'Adults must be between 1 and 20.';
+    }
+    if (!Number.isInteger(children) || children < 0 || children > 20) {
+      return 'Children must be between 0 and 20.';
+    }
+    if (!Number.isInteger(roomCount) || roomCount < 1 || roomCount > 20) {
+      return 'Room count must be between 1 and 20.';
+    }
+    if (form.checkInDate && form.checkOutDate && new Date(form.checkOutDate).getTime() <= new Date(form.checkInDate).getTime()) {
+      return 'Check-out date must be after check-in date.';
+    }
+  }
+
+  return '';
+};
+
 export default function BookingsSection() {
   const { bookings, loading, error, cancelBooking, updateBooking, deleteBooking } = useTouristBookings();
   const [activeStatusTab, setActiveStatusTab] = useState('all');
@@ -284,6 +327,13 @@ export default function BookingsSection() {
       setMessage('Editing is locked within 24 hours of pickup. Please contact support.');
       return;
     }
+
+    const validationError = validateManageForm(manageForm, Boolean(selectedBooking.isTour));
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
+
     setMessage('');
     setActionLoadingId(selectedBooking._id);
     const pricing = getManagePricing();
