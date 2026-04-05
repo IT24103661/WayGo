@@ -81,8 +81,11 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const strength = getStrength(form.password);
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 11) : value;
+    setForm((prev) => ({ ...prev, [name]: nextValue }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,6 +97,11 @@ export default function RegisterPage() {
     }
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (!/^\d{11}$/.test(form.phone.trim())) {
+      setError('Phone number must contain exactly 11 digits (numbers only).');
       return;
     }
 
@@ -304,7 +312,10 @@ export default function RegisterPage() {
                   <MdPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={20} />
                   <input
                     type="tel" name="phone" value={form.phone} onChange={handleChange} required
-                    placeholder="+1 555 000 0000"
+                    placeholder="0712345678"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={11}
                     className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
                   />
                 </div>

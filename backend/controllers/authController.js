@@ -39,6 +39,12 @@ exports.registerUser = async (req, res) => {
         if (!name || !email || !password || !phone) {
             return res.status(400).json({ message: 'Name, email, password and phone are all required.' });
         }
+
+        const normalizedPhone = String(phone).trim();
+        if (!/^\d{11}$/.test(normalizedPhone)) {
+            return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+        }
+
         if (password.length < 6) {
             return res.status(400).json({ message: 'Password must be at least 6 characters.' });
         }
@@ -84,7 +90,7 @@ exports.registerUser = async (req, res) => {
             name:     name.trim(),
             email:    email.toLowerCase().trim(),
             password: hashedPassword,
-            phone:    phone.trim(),
+            phone:    normalizedPhone,
             role:     role || 'Tourist',
         });
 
@@ -227,7 +233,13 @@ exports.updateProfile = async (req, res) => {
         }
 
         if (name !== undefined) user.name = String(name).trim();
-        if (phone !== undefined) user.phone = String(phone).trim();
+        if (phone !== undefined) {
+            const normalizedPhone = String(phone).trim();
+            if (!/^\d{11}$/.test(normalizedPhone)) {
+                return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+            }
+            user.phone = normalizedPhone;
+        }
         if (company !== undefined) user.company = String(company).trim();
         if (depot !== undefined) user.depot = String(depot).trim();
         if (region !== undefined) user.region = String(region).trim();

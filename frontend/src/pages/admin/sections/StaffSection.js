@@ -14,7 +14,7 @@ function StaffModal({ mode, initial, role, saving, existing = [], onSave, onClos
 
   const change = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 11) : value;
     setForm((p) => ({ ...p, [name]: nextValue }));
     setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
   };
@@ -41,8 +41,8 @@ function StaffModal({ mode, initial, role, saving, existing = [], onSave, onClos
 
     if (!phone) {
       nextErrors.phone = 'Phone is required.';
-    } else if (!/^\d{10}$/.test(phone)) {
-      nextErrors.phone = 'Phone number must contain exactly 10 digits (numbers only).';
+    } else if (!/^\d{11}$/.test(phone)) {
+      nextErrors.phone = 'Phone number must contain exactly 11 digits (numbers only).';
     }
 
     if (!['Active', 'Inactive'].includes(status)) {
@@ -89,7 +89,7 @@ function StaffModal({ mode, initial, role, saving, existing = [], onSave, onClos
                 placeholder={placeholder}
                 inputMode={name === 'phone' ? 'numeric' : undefined}
                 pattern={name === 'phone' ? '[0-9]*' : undefined}
-                maxLength={name === 'phone' ? 10 : undefined}
+                maxLength={name === 'phone' ? 11 : undefined}
                 className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors[name] && <p className="text-xs text-rose-600 mt-1">{errors[name]}</p>}
