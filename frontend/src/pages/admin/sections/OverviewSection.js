@@ -104,7 +104,7 @@ function BarChart() {
               title={`Tour: ${tour}`}
             />
           </div>
-          <span className="text-xs text-gray-400">{m}</span>
+          <span className="text-xs text-slate-500">{m}</span>
         </div>
       ))}
     </div>
@@ -129,18 +129,24 @@ const STATUS_STYLE = {
 /* ─── MAIN ───────────────────────────────────────────────── */
 export default function OverviewSection() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 wg-admin-motion wg-motion-overview">
+      <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 px-6 py-5 text-white shadow-[0_26px_55px_-35px_rgba(37,99,235,0.75)]">
+        <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/15 blur-xl" />
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Command Center</p>
+        <h2 className="mt-1 text-xl font-bold">Executive Overview</h2>
+        <p className="mt-1 text-sm text-blue-100/95">Platform pulse, revenue split, and recent system movement in one glance.</p>
+      </div>
 
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {KPI.map(({ label, value, change, icon: Icon, gradient, bg, text }) => (
-          <div key={label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-start gap-4">
+          <div key={label} className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-5 flex items-start gap-4">
             <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
               <Icon className={`text-2xl ${text}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-gray-400 font-medium truncate">{label}</p>
-              <p className="text-2xl font-bold text-gray-800 leading-tight mt-0.5">{value}</p>
+              <p className="text-xs text-slate-500 font-medium truncate">{label}</p>
+              <p className="text-2xl font-bold text-slate-900 leading-tight mt-0.5">{value}</p>
               <p className={`text-xs mt-1 font-medium ${text}`}>{change}</p>
             </div>
           </div>
@@ -151,73 +157,73 @@ export default function OverviewSection() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Pie — Revenue Split */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-800 mb-1">Revenue Split</h2>
-          <p className="text-xs text-gray-400 mb-4">Taxi income vs. Tour income</p>
+        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
+          <h2 className="text-sm font-bold text-slate-900 mb-1">Revenue Split</h2>
+          <p className="text-xs text-slate-500 mb-4">Taxi income vs. Tour income</p>
           <div className="flex items-center gap-6">
             <PieChart />
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-orange-400 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Taxi Revenue</p>
-                  <p className="text-xs text-gray-400">LKR 2.99M · 62%</p>
+                  <p className="text-sm font-semibold text-slate-800">Taxi Revenue</p>
+                  <p className="text-xs text-slate-500">LKR 2.99M · 62%</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-emerald-400 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Tour Revenue</p>
-                  <p className="text-xs text-gray-400">LKR 1.83M · 38%</p>
+                  <p className="text-sm font-semibold text-slate-800">Tour Revenue</p>
+                  <p className="text-xs text-slate-500">LKR 1.83M · 38%</p>
                 </div>
               </div>
-              <div className="mt-2 pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Total</p>
-                <p className="text-base font-bold text-gray-800">LKR 4.82M</p>
+              <div className="mt-2 pt-2 border-t border-slate-100">
+                <p className="text-xs text-slate-500">Total</p>
+                <p className="text-base font-bold text-slate-900">LKR 4.82M</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Bar — Monthly Booking Trends */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-800 mb-1">Monthly Booking Trends</h2>
-          <p className="text-xs text-gray-400 mb-4">Last 6 months — Taxi vs. Tour bookings</p>
+        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
+          <h2 className="text-sm font-bold text-slate-900 mb-1">Monthly Booking Trends</h2>
+          <p className="text-xs text-slate-500 mb-4">Last 6 months — Taxi vs. Tour bookings</p>
           <BarChart />
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-orange-400" />
-              <span className="text-xs text-gray-500">Taxi</span>
+              <span className="text-xs text-slate-600">Taxi</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400" />
-              <span className="text-xs text-gray-500">Tour</span>
+              <span className="text-xs text-slate-600">Tour</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* RECENT ACTIVITY */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-800">Recent Activity</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Last 5 system actions</p>
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-bold text-slate-900">Recent Activity</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Last 5 system actions</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <tr className="bg-slate-50/80 text-left text-xs text-slate-600 uppercase tracking-wider">
                 {['Date & Time', 'Action Type', 'User Involved', 'Status'].map((h) => (
                   <th key={h} className="px-6 py-3 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-100">
               {ACTIVITY.map((a, i) => (
-                <tr key={i} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-3 text-gray-400 text-xs font-mono whitespace-nowrap">{a.date}</td>
-                  <td className="px-6 py-3 font-medium text-gray-800">{a.type}</td>
-                  <td className="px-6 py-3 text-gray-500">{a.user}</td>
+                <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-6 py-3 text-slate-500 text-xs font-mono whitespace-nowrap">{a.date}</td>
+                  <td className="px-6 py-3 font-medium text-slate-900">{a.type}</td>
+                  <td className="px-6 py-3 text-slate-600">{a.user}</td>
                   <td className="px-6 py-3">
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${STATUS_STYLE[a.status]}`}>
                       {a.status}

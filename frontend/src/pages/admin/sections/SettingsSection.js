@@ -3,8 +3,8 @@ export default function SettingsSection() {
     <div className="max-w-2xl space-y-6">
 
       {/* General */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h3 className="font-bold text-gray-800 mb-5">General Settings</h3>
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
+        <h3 className="font-bold text-slate-900 mb-5">General Settings</h3>
         <div className="space-y-4">
           {[
             { label: 'Platform Name',  value: 'WayGo' },
@@ -12,10 +12,10 @@ export default function SettingsSection() {
             { label: 'Contact Number', value: '+94 11 234 5678' },
           ].map(({ label, value }) => (
             <div key={label}>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">{label}</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
               <input
                 defaultValue={value}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </div>
           ))}
@@ -26,8 +26,8 @@ export default function SettingsSection() {
       </div>
 
       {/* Danger zone */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h3 className="font-bold text-gray-800 mb-4">Danger Zone</h3>
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
+        <h3 className="font-bold text-slate-900 mb-4">Danger Zone</h3>
         <div className="flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100">
           <div>
             <p className="text-sm font-semibold text-red-700">Reset All Data</p>

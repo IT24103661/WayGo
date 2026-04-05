@@ -41,7 +41,98 @@ const request = async (path, options = {}) => {
 };
 
 export const adminAPI = {
+  getMyProfile: () => request('/users/profile'),
+
+  updateMyProfile: (payload) => request('/users/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
+
+  changeMyPassword: (payload) => request('/users/password', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
+
+  getOverview: () => request('/admin/overview'),
+
+  getAnalytics: () => request('/admin/analytics'),
+
+  getStaff: ({ role = '', status = '', q = '', page = 1, limit = 10 } = {}) => {
+    const params = new URLSearchParams();
+    if (role) params.set('role', role);
+    if (status) params.set('status', status);
+    if (q) params.set('q', q);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    return request(`/admin/staff?${params.toString()}`);
+  },
+
+  createStaff: (payload) => request('/admin/staff', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+
+  updateStaff: (staffId, payload) => request(`/admin/staff/${staffId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
+
+  updateStaffStatus: (staffId, status) => request(`/admin/staff/${staffId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  }),
+
+  deleteStaff: (staffId) => request(`/admin/staff/${staffId}`, {
+    method: 'DELETE'
+  }),
+
+  getRefundRequests: (status = '') => request(`/admin/conflicts/refunds${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+
+  updateRefundRequest: (refundId, payload) => request(`/admin/conflicts/refunds/${refundId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  }),
+
+  getBans: (active = '') => request(`/admin/conflicts/bans${active === '' ? '' : `?active=${active}`}`),
+
+  createBan: (payload) => request('/admin/conflicts/bans', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+
+  updateBan: (banId, payload) => request(`/admin/conflicts/bans/${banId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  }),
+
+  getConfig: () => request('/admin/config'),
+
+  updateConfig: (payload) => request('/admin/config', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
+
+  getAuditLogs: ({ action = '', page = 1, limit = 20 } = {}) => {
+    const params = new URLSearchParams();
+    if (action) params.set('action', action);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    return request(`/admin/audit-logs?${params.toString()}`);
+  },
+
   getSalaryApprovals: (status) => request(`/users/admin/salaries${status ? `?status=${status}` : ''}`),
+
+  getSalaryCandidates: (role) => request(`/users/admin/salaries/candidates${role ? `?role=${encodeURIComponent(role)}` : ''}`),
+
+  createSalaryApprovals: (payload) => request('/users/admin/salaries', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+
+  updateSalaryApproval: (salaryId, payload) => request(`/users/admin/salaries/${salaryId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }),
 
   updateSalaryStatus: (salaryId, payload) => request(`/users/admin/salaries/${salaryId}/status`, {
     method: 'PATCH',

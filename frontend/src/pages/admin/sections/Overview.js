@@ -4,13 +4,13 @@ import { Badge, ROLE_COLOR } from './shared';
 /* ── Stat card ── */
 function StatCard({ icon: Icon, label, value, change, up, color }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4 hover:shadow-md transition-shadow">
+    <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6 flex items-start gap-4 hover:shadow-md transition-shadow">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon className="text-white text-2xl" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
-        <p className="text-3xl font-bold text-gray-800 mt-0.5">{value}</p>
+        <p className="text-sm text-slate-600 font-medium">{label}</p>
+        <p className="text-3xl font-bold text-slate-900 mt-0.5">{value}</p>
         <p className={`text-xs mt-1 flex items-center gap-0.5 font-medium ${up ? 'text-emerald-600' : 'text-red-500'}`}>
           {up ? <MdArrowUpward /> : <MdArrowDownward />}
           {change} this month
@@ -51,13 +51,13 @@ export default function Overview() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Bar chart mock */}
-        <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="xl:col-span-2 bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-gray-800">Revenue Overview</h2>
-              <p className="text-xs text-gray-400">March 2026</p>
+              <h2 className="text-base font-bold text-slate-900">Revenue Overview</h2>
+              <p className="text-xs text-slate-500">March 2026</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option>Last 7 days</option>
               <option>Last 30 days</option>
               <option>Last 90 days</option>
@@ -70,16 +70,16 @@ export default function Overview() {
                   className="w-full rounded-t-lg bg-gradient-to-t from-blue-600 to-blue-400 transition-all duration-500"
                   style={{ height: `${h}%` }}
                 />
-                <span className="text-xs text-gray-400">{['M','T','W','T','F','S','S'][i]}</span>
+                <span className="text-xs text-slate-500">{['M','T','W','T','F','S','S'][i]}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* New users */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-gray-800">New Users</h2>
+            <h2 className="text-base font-bold text-slate-900">New Users</h2>
             <button className="text-xs text-blue-600 hover:underline font-medium">View all</button>
           </div>
           <div className="space-y-3">
@@ -89,10 +89,10 @@ export default function Overview() {
                   {u.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-700 truncate">{u.name}</p>
-                  <p className="text-xs text-gray-400">{u.joined}</p>
+                  <p className="text-sm font-semibold text-slate-800 truncate">{u.name}</p>
+                  <p className="text-xs text-slate-500">{u.joined}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${ROLE_COLOR[u.role] || 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${ROLE_COLOR[u.role] || 'bg-gray-100 text-slate-700'}`}>
                   {u.role}
                 </span>
               </div>
@@ -102,33 +102,33 @@ export default function Overview() {
       </div>
 
       {/* Recent bookings */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-800">Recent Bookings</h2>
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-900">Recent Bookings</h2>
           <button className="text-xs text-blue-600 hover:underline font-medium">View all</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <tr className="bg-slate-50/80 text-left text-xs text-slate-600 uppercase tracking-wider">
                 {['ID','Tourist','Type','Destination','Status','Amount'].map(h => (
                   <th key={h} className={`px-6 py-3 font-semibold ${h === 'Amount' ? 'text-right' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-100">
               {RECENT_BOOKINGS.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs text-gray-500">{b.id}</td>
-                  <td className="px-6 py-4 font-medium text-gray-800">{b.tourist}</td>
+                <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-6 py-4 font-mono text-xs text-slate-600">{b.id}</td>
+                  <td className="px-6 py-4 font-medium text-slate-900">{b.tourist}</td>
                   <td className="px-6 py-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${b.type === 'Tour' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                       {b.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{b.destination}</td>
+                  <td className="px-6 py-4 text-slate-700">{b.destination}</td>
                   <td className="px-6 py-4"><Badge status={b.status} /></td>
-                  <td className="px-6 py-4 text-right font-semibold text-gray-800">{b.amount}</td>
+                  <td className="px-6 py-4 text-right font-semibold text-slate-900">{b.amount}</td>
                 </tr>
               ))}
             </tbody>

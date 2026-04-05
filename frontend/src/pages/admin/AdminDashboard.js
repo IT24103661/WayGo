@@ -8,7 +8,9 @@ import AnalyticsSection  from './sections/AnalyticsSection';
 import ConfigSection     from './sections/ConfigSection';
 import SalaryApprovalsSection from './sections/SalaryApprovalsSection';
 import ConflictsSection  from './sections/ConflictsSection';
+import ProfileSection    from './sections/ProfileSection';
 import useAdminGuard     from './useAdminGuard';
+import './adminMotion.css';
 
 export default function AdminDashboard() {
   useAdminGuard();
@@ -22,20 +24,24 @@ export default function AdminDashboard() {
     config:     { title: 'Global Configuration',  subtitle: 'Platform rates and settings' },
     salaries:   { title: 'Salary Approvals',      subtitle: 'Approve pending fleet salary requests' },
     conflicts:  { title: 'Conflict Resolution',   subtitle: 'Refunds and user bans' },
+    profile:    { title: 'Admin Profile',         subtitle: 'Update your personal account details' },
   };
   const meta = PAGE_META[segment] || PAGE_META.overview;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="relative flex h-screen overflow-hidden bg-[#f0fbff]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
+      <div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-cyan-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
         <AdminTopBar
           title={meta.title}
           subtitle={meta.subtitle}
           onMenuClick={() => setSidebarOpen(true)}
+          segment={segment}
         />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4 bg-gradient-to-b from-white/30 via-transparent to-transparent">
           <Routes>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview"   element={<OverviewSection />} />
@@ -44,6 +50,7 @@ export default function AdminDashboard() {
             <Route path="config"     element={<ConfigSection />} />
             <Route path="salaries"   element={<SalaryApprovalsSection />} />
             <Route path="conflicts"  element={<ConflictsSection />} />
+            <Route path="profile"    element={<ProfileSection />} />
           </Routes>
         </main>
       </div>

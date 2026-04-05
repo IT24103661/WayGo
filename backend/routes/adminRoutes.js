@@ -1,0 +1,46 @@
+const express = require('express');
+const router = express.Router();
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const {
+  getOverview,
+  getAnalytics,
+  getStaff,
+  createStaff,
+  updateStaff,
+  updateStaffStatus,
+  deleteStaff,
+  getRefundRequests,
+  updateRefundRequest,
+  getBans,
+  createBan,
+  updateBan,
+  getConfig,
+  updateConfig,
+  getAuditLogs
+} = require('../controllers/adminModuleController');
+
+router.use(protect);
+router.use(authorizeRoles('SystemAdmin'));
+
+router.get('/overview', getOverview);
+router.get('/analytics', getAnalytics);
+
+router.get('/staff', getStaff);
+router.post('/staff', createStaff);
+router.put('/staff/:id', updateStaff);
+router.patch('/staff/:id/status', updateStaffStatus);
+router.delete('/staff/:id', deleteStaff);
+
+router.get('/conflicts/refunds', getRefundRequests);
+router.patch('/conflicts/refunds/:id', updateRefundRequest);
+
+router.get('/conflicts/bans', getBans);
+router.post('/conflicts/bans', createBan);
+router.patch('/conflicts/bans/:id', updateBan);
+
+router.get('/config', getConfig);
+router.put('/config', updateConfig);
+
+router.get('/audit-logs', getAuditLogs);
+
+module.exports = router;
