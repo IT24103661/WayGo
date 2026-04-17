@@ -100,8 +100,8 @@ export default function ProfileSection() {
       nextErrors.email = 'Email should be 120 characters or fewer.';
     }
 
-    if (!/^\d{11}$/.test(phone)) {
-      nextErrors.phone = 'Phone number must contain exactly 11 digits (numbers only).';
+    if (!/^\d{10}$/.test(phone)) {
+      nextErrors.phone = 'Phone number must contain exactly 10 digits (numbers only).';
     }
 
     setFieldErrors(nextErrors);
