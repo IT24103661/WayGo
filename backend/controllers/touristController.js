@@ -255,9 +255,6 @@ exports.createBooking = async (req, res) => {
     if (dropoff && dropoff.length > 180) {
       return res.status(400).json({ message: 'dropoffLocation must be 180 characters or fewer.' });
     }
-    if (dropoff && normalizeLocation(pickup) === normalizeLocation(dropoff)) {
-      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
-    }
 
     const pickupValidation = date ? validatePickupTime(date, 'date') : { ok: true, value: new Date(Date.now() + 10 * 60 * 1000) };
     if (!pickupValidation.ok) {
@@ -309,7 +306,7 @@ exports.createBooking = async (req, res) => {
       bookingType: 'Tour',
       tourPackage: tour ? tour._id : null,
       pickupLocation: pickup,
-      dropoffLocation: dropoff || null,
+      dropoffLocation: null,
       pickupTime,
       totalPrice: finalPrice,
       packageOptions: sanitizedOptions,
@@ -688,7 +685,11 @@ exports.updateBooking = async (req, res) => {
       booking.dropoffLocation = dropoff || null;
     }
 
-    if (booking.dropoffLocation && normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)) {
+    if (
+      booking.bookingType === 'Taxi' &&
+      booking.dropoffLocation &&
+      normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)
+    ) {
       return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
     }
 

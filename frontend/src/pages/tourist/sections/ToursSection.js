@@ -225,7 +225,6 @@ export default function ToursSection() {
         date: wizard.checkInDate,
         members: pricing.guests,
         pickupLocation: selectedTour.destination,
-        dropoffLocation: selectedTour.destination,
         totalPrice: pricing.finalTotal,
         packageOptions: {
           tourTitle: selectedTour.title,

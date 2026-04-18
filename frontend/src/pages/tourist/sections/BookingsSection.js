@@ -131,11 +131,13 @@ const validateManageForm = (form, isTour) => {
   if (!pickup || pickup.length < 3 || pickup.length > 180) {
     return 'Pickup location must be between 3 and 180 characters.';
   }
-  if (dropoff && (dropoff.length < 3 || dropoff.length > 180)) {
-    return 'Dropoff location must be between 3 and 180 characters.';
-  }
-  if (pickup && dropoff && pickup.toLowerCase() === dropoff.toLowerCase()) {
-    return 'Pickup and dropoff locations cannot be the same.';
+  if (!isTour) {
+    if (dropoff && (dropoff.length < 3 || dropoff.length > 180)) {
+      return 'Dropoff location must be between 3 and 180 characters.';
+    }
+    if (pickup && dropoff && pickup.toLowerCase() === dropoff.toLowerCase()) {
+      return 'Pickup and dropoff locations cannot be the same.';
+    }
   }
 
   const pickupAt = new Date(form.pickupTime).getTime();
@@ -354,7 +356,7 @@ export default function BookingsSection() {
     try {
       await updateBooking(selectedBooking._id, {
         pickupLocation: manageForm.pickupLocation.trim(),
-        dropoffLocation: manageForm.dropoffLocation.trim(),
+        dropoffLocation: selectedBooking.isTour ? '' : manageForm.dropoffLocation.trim(),
         pickupTime: manageForm.pickupTime,
         totalPrice: pricing.final,
         packageOptions: selectedBooking.isTour
@@ -583,13 +585,15 @@ export default function BookingsSection() {
                   disabled={isCutoffReached(selectedBooking)}
                   required
                 />
-                <input
-                  value={manageForm.dropoffLocation}
-                  onChange={(e) => setManageForm((prev) => ({ ...prev, dropoffLocation: e.target.value }))}
-                  placeholder="Dropoff location"
-                  className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                  disabled={isCutoffReached(selectedBooking)}
-                />
+                {!selectedBooking.isTour && (
+                  <input
+                    value={manageForm.dropoffLocation}
+                    onChange={(e) => setManageForm((prev) => ({ ...prev, dropoffLocation: e.target.value }))}
+                    placeholder="Dropoff location"
+                    className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                    disabled={isCutoffReached(selectedBooking)}
+                  />
+                )}
                 <input
                   type="datetime-local"
                   value={manageForm.pickupTime}
