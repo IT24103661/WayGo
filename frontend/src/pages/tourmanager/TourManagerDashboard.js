@@ -27,20 +27,20 @@ export default function TourManagerDashboard() {
   const meta = PAGE_META[segment] || PAGE_META.overview;
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-[#f8fafc]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
-      <div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-cyan-200/45 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-200/35 blur-3xl" />
+    <div className="relative flex h-screen overflow-hidden bg-[#f0fbff]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
+      <div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-cyan-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
 
       <div className="relative z-10 flex h-full w-full">
         <TourManagerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
           <TourManagerTopBar
             title={meta.title}
             subtitle={meta.subtitle}
             onMenuClick={() => setSidebarOpen(true)}
           />
-          <main className="flex-1 overflow-y-auto px-6 pb-10">
+          <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4 bg-gradient-to-b from-white/30 via-transparent to-transparent">
             <Routes>
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<OverviewSection />} />

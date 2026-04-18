@@ -119,6 +119,12 @@ const getNights = (checkInDate, checkOutDate) => {
 
 const formatLKR = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
 
+const getTodayDateInput = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 export default function ToursSection() {
   const { createBooking } = useTouristBookings();
   const [selectedTour, setSelectedTour] = useState(null);
@@ -126,6 +132,7 @@ export default function ToursSection() {
   const [wizard, setWizard] = useState(initialWizardState);
   const [bookingStatus, setBookingStatus] = useState({});
   const [message, setMessage] = useState('');
+  const todayDate = getTodayDateInput();
 
   const isTourOnly = selectedTour?.includesTag === 'Tour Only';
   const wizardSteps = isTourOnly ? TOUR_ONLY_WIZARD_STEPS : FULL_WIZARD_STEPS;
@@ -192,6 +199,18 @@ export default function ToursSection() {
 
   const handleConfirmBooking = async () => {
     if (!selectedTour) return;
+    if (!wizard.checkInDate || !wizard.checkOutDate) {
+      setMessage('Please select both check-in and check-out dates.');
+      return;
+    }
+    if (wizard.checkInDate < todayDate || wizard.checkOutDate < todayDate) {
+      setMessage('Check-in and check-out must be today or future dates.');
+      return;
+    }
+    if (wizard.checkOutDate <= wizard.checkInDate) {
+      setMessage('Check-out date must be after check-in date.');
+      return;
+    }
     if (pricing.capacityWarning) {
       setMessage(pricing.capacityWarning);
       return;
@@ -363,11 +382,11 @@ export default function ToursSection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Check-in Date</label>
-                    <input type="date" value={wizard.checkInDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkInDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input type="date" value={wizard.checkInDate} min={todayDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkInDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Check-out Date</label>
-                    <input type="date" value={wizard.checkOutDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input type="date" value={wizard.checkOutDate} min={wizard.checkInDate || todayDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Adults</label>

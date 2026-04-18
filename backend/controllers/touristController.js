@@ -25,6 +25,16 @@ const validatePickupTime = (value, fieldName = 'pickupTime') => {
 
 const normalizeLocation = (value) => cleanText(value).toLowerCase();
 
+const toDayStart = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const isPastByDay = (date) => {
+  return toDayStart(date).getTime() < toDayStart(new Date()).getTime();
+};
+
 const releaseBookingResources = async (booking) => {
   if (!booking) return;
 
@@ -279,6 +289,12 @@ exports.createBooking = async (req, res) => {
     }
     if (sanitizedOptions.checkInDate && sanitizedOptions.checkOutDate && sanitizedOptions.checkOutDate <= sanitizedOptions.checkInDate) {
       return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
+    }
+    if (sanitizedOptions.checkInDate && isPastByDay(sanitizedOptions.checkInDate)) {
+      return res.status(400).json({ message: 'packageOptions.checkInDate cannot be in the past.' });
+    }
+    if (sanitizedOptions.checkOutDate && isPastByDay(sanitizedOptions.checkOutDate)) {
+      return res.status(400).json({ message: 'packageOptions.checkOutDate cannot be in the past.' });
     }
 
     const finalPrice = sanitizedOptions.pricing.finalTotal > 0
@@ -712,6 +728,12 @@ exports.updateBooking = async (req, res) => {
       }
       if (nextOptions.checkInDate && nextOptions.checkOutDate && nextOptions.checkOutDate <= nextOptions.checkInDate) {
         return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
+      }
+      if (nextOptions.checkInDate && isPastByDay(nextOptions.checkInDate)) {
+        return res.status(400).json({ message: 'packageOptions.checkInDate cannot be in the past.' });
+      }
+      if (nextOptions.checkOutDate && isPastByDay(nextOptions.checkOutDate)) {
+        return res.status(400).json({ message: 'packageOptions.checkOutDate cannot be in the past.' });
       }
       booking.packageOptions = nextOptions;
     }

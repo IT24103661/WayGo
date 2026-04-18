@@ -118,6 +118,12 @@ const getTimelineStep = (status) => {
   return 0;
 };
 
+const getTodayDateInput = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 const validateManageForm = (form, isTour) => {
   const pickup = String(form.pickupLocation || '').trim();
   const dropoff = String(form.dropoffLocation || '').trim();
@@ -141,6 +147,7 @@ const validateManageForm = (form, isTour) => {
   }
 
   if (isTour) {
+    const todayDate = getTodayDateInput();
     const adults = Number(form.adults || 0);
     const children = Number(form.children || 0);
     const roomCount = Number(form.roomCount || 0);
@@ -152,6 +159,12 @@ const validateManageForm = (form, isTour) => {
     }
     if (!Number.isInteger(roomCount) || roomCount < 1 || roomCount > 20) {
       return 'Room count must be between 1 and 20.';
+    }
+    if (form.checkInDate && form.checkInDate < todayDate) {
+      return 'Check-in date cannot be in the past.';
+    }
+    if (form.checkOutDate && form.checkOutDate < todayDate) {
+      return 'Check-out date cannot be in the past.';
     }
     if (form.checkInDate && form.checkOutDate && new Date(form.checkOutDate).getTime() <= new Date(form.checkInDate).getTime()) {
       return 'Check-out date must be after check-in date.';
@@ -168,6 +181,7 @@ export default function BookingsSection() {
   const [message, setMessage] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const todayDate = getTodayDateInput();
   const [manageForm, setManageForm] = useState({
     pickupLocation: '',
     dropoffLocation: '',
@@ -592,8 +606,8 @@ export default function BookingsSection() {
 
               {selectedBooking.isTour && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input type="date" value={manageForm.checkInDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkInDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
-                  <input type="date" value={manageForm.checkOutDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <input type="date" value={manageForm.checkInDate} min={todayDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkInDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
+                  <input type="date" value={manageForm.checkOutDate} min={manageForm.checkInDate || todayDate} onChange={(e) => setManageForm((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
                   <input type="number" min="1" value={manageForm.adults} onChange={(e) => setManageForm((prev) => ({ ...prev, adults: Number(e.target.value || 1) }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
                   <input type="number" min="0" value={manageForm.children} onChange={(e) => setManageForm((prev) => ({ ...prev, children: Number(e.target.value || 0) }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)} />
                   <select value={manageForm.roomType} onChange={(e) => setManageForm((prev) => ({ ...prev, roomType: e.target.value }))} className="px-3 py-2.5 border border-cyan-200 rounded-xl" disabled={isCutoffReached(selectedBooking)}>
