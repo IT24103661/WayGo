@@ -8,7 +8,7 @@ const FleetNotification = require('../models/FleetNotification');
 const TouristNotification = require('../models/TouristNotification');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\d{11}$/;
+const PHONE_REGEX = /^\d{10}$/;
 
 const cleanText = (value) => String(value || '').trim();
 
@@ -158,7 +158,7 @@ exports.updateProfile = async (req, res) => {
     if (phone !== undefined) {
       const nextPhone = cleanText(phone);
       if (!PHONE_REGEX.test(nextPhone)) {
-        return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+        return res.status(400).json({ message: 'Phone number must contain exactly 10 digits (numbers only).' });
       }
       tourist.phone = nextPhone;
     }

@@ -10,6 +10,7 @@ const AdminBan = require('../models/AdminBan');
 const AdminAuditLog = require('../models/AdminAuditLog');
 
 const STAFF_ROLES = ['TourManager', 'FleetManager'];
+const BAN_TARGET_ROLES = ['Tourist', 'Driver', 'TourManager', 'FleetManager'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const clampNumber = (value, min, max) => {
@@ -502,6 +503,39 @@ exports.getBans = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Server error fetching bans.' });
+  }
+};
+
+exports.getConflictUsers = async (req, res) => {
+  try {
+    const { q = '', role = '' } = req.query;
+    const query = {
+      role: { $in: BAN_TARGET_ROLES }
+    };
+
+    const normalizedRole = String(role || '').trim();
+    if (normalizedRole && BAN_TARGET_ROLES.includes(normalizedRole)) {
+      query.role = normalizedRole;
+    }
+
+    const search = String(q || '').trim();
+    if (search) {
+      const rx = new RegExp(search, 'i');
+      query.$or = [{ name: rx }, { email: rx }, { phone: rx }];
+    }
+
+    const rows = await User.find(query)
+      .select('name email phone role adminStatus')
+      .sort({ name: 1 })
+      .limit(500);
+
+    return res.json({
+      success: true,
+      count: rows.length,
+      data: rows
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching users for conflicts.' });
   }
 };
 

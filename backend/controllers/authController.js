@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 
 const VEHICLE_PLATE_REGEX = /^[A-Z]{2,3}-\d{4}$/;
 const VEHICLE_TYPES = ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'];
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOCK_TIME_MS = 3 * 60 * 1000;
 
 /* ─ helper: build a signed JWT ─ */
 const signToken = (user) =>
@@ -41,8 +43,8 @@ exports.registerUser = async (req, res) => {
         }
 
         const normalizedPhone = String(phone).trim();
-        if (!/^\d{11}$/.test(normalizedPhone)) {
-            return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+        if (!/^\d{10}$/.test(normalizedPhone)) {
+            return res.status(400).json({ message: 'Phone number must contain exactly 10 digits (numbers only).' });
         }
 
         if (password.length < 6) {
@@ -169,14 +171,56 @@ exports.loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required.' });
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const normalizedEmail = String(email).toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return res.status(400).json({ message: 'Invalid email or password.' });
         }
 
+        const now = Date.now();
+        if (user.lockUntil && user.lockUntil.getTime() > now) {
+            const remainingMs = user.lockUntil.getTime() - now;
+            const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
+            return res.status(423).json({
+                message: `Account is temporarily locked. Try again in about ${remainingMinutes} minute(s).`,
+                lockUntil: user.lockUntil.toISOString(),
+                retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000))
+            });
+        }
+
+        if (user.lockUntil && user.lockUntil.getTime() <= now) {
+            user.lockUntil = null;
+            user.loginAttempts = 0;
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid email or password.' });
+            user.loginAttempts = Number(user.loginAttempts || 0) + 1;
+
+            if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                user.lockUntil = new Date(now + LOCK_TIME_MS);
+                user.loginAttempts = 0;
+                await user.save();
+                const retryAfterSeconds = Math.ceil(LOCK_TIME_MS / 1000);
+                return res.status(423).json({
+                    message: 'Too many failed attempts. Your account is locked for 3 minutes.',
+                    lockUntil: user.lockUntil.toISOString(),
+                    retryAfterSeconds
+                });
+            }
+
+            const attemptsLeft = MAX_LOGIN_ATTEMPTS - user.loginAttempts;
+            await user.save();
+
+            return res.status(400).json({
+                message: `Invalid email or password. ${attemptsLeft} attempt(s) remaining before a 3-minute lock.`
+            });
+        }
+
+        if (user.loginAttempts || user.lockUntil) {
+            user.loginAttempts = 0;
+            user.lockUntil = null;
+            await user.save();
         }
 
         const token = signToken(user);
@@ -235,8 +279,8 @@ exports.updateProfile = async (req, res) => {
         if (name !== undefined) user.name = String(name).trim();
         if (phone !== undefined) {
             const normalizedPhone = String(phone).trim();
-            if (!/^\d{11}$/.test(normalizedPhone)) {
-                return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+            if (!/^\d{10}$/.test(normalizedPhone)) {
+                return res.status(400).json({ message: 'Phone number must contain exactly 10 digits (numbers only).' });
             }
             user.phone = normalizedPhone;
         }

@@ -57,12 +57,40 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [lockUntil, setLockUntil] = useState(null);
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  const isLocked = lockUntil && lockUntil > nowTick;
+  const remainingSeconds = isLocked ? Math.max(0, Math.ceil((lockUntil - nowTick) / 1000)) : 0;
+  const remainingMinutes = Math.floor(remainingSeconds / 60);
+  const remainingRemainderSeconds = remainingSeconds % 60;
+
+  useEffect(() => {
+    if (!isLocked) return undefined;
+    const timer = setInterval(() => {
+      setNowTick(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isLocked]);
+
+  useEffect(() => {
+    if (!isLocked && lockUntil) {
+      setLockUntil(null);
+      setError('Lock finished. You can try signing in again.');
+    }
+  }, [isLocked, lockUntil]);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isLocked) {
+      setError('Account is currently locked. Please wait until the countdown finishes.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
@@ -76,6 +104,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 423) {
+          const nextLockUntil = data?.lockUntil ? Date.parse(data.lockUntil) : (Date.now() + 3 * 60 * 1000);
+          setLockUntil(Number.isFinite(nextLockUntil) ? nextLockUntil : (Date.now() + 3 * 60 * 1000));
+          setNowTick(Date.now());
+          setError(data.message || 'Too many attempts. Your account is temporarily locked.');
+          return;
+        }
         setError(data.message || 'Invalid email or password.');
       } else {
         localStorage.removeItem('user');
@@ -195,9 +230,20 @@ export default function LoginPage() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3.5 rounded-xl mb-5 animate-fade-in">
-              <span className="text-red-400 mt-0.5">⚠</span>
-              <span>{error}</span>
+            <div className={`flex items-start gap-3 text-sm px-4 py-3.5 rounded-xl mb-5 animate-fade-in ${
+              isLocked
+                ? 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-900'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              <span className={`mt-0.5 ${isLocked ? 'text-amber-500' : 'text-red-400'}`}>⚠</span>
+              <div className="space-y-1">
+                <p className="font-semibold">{error}</p>
+                {isLocked && (
+                  <p className="text-xs text-amber-800">
+                    Security lock active: {String(remainingMinutes).padStart(2, '0')}:{String(remainingRemainderSeconds).padStart(2, '0')} remaining.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -214,9 +260,9 @@ export default function LoginPage() {
                 />
                 <input
                   type="email" name="email" value={form.email}
-                  onChange={handleChange} required
+                  onChange={handleChange} required disabled={isLocked}
                   placeholder="you@example.com"
-                  className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                  className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -235,12 +281,12 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password" value={form.password}
-                  onChange={handleChange} required
+                  onChange={handleChange} required disabled={isLocked}
                   placeholder="Enter your password"
-                  className="w-full pl-10 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
+                  className="w-full pl-10 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                <button type="button" onClick={() => setShowPassword(!showPassword)} disabled={isLocked}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
                 </button>
               </div>
@@ -262,7 +308,7 @@ export default function LoginPage() {
             <div className="animate-fade-in-up-d4">
               <RippleBtn
                 type="submit"
-                disabled={loading || loginSuccess}
+                disabled={loading || loginSuccess || isLocked}
                 className="w-full py-4 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-sm"
               >
                 {loading ? (

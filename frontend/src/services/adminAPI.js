@@ -95,6 +95,14 @@ export const adminAPI = {
 
   getBans: (active = '') => request(`/admin/conflicts/bans${active === '' ? '' : `?active=${active}`}`),
 
+  getConflictUsers: ({ q = '', role = '' } = {}) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (role) params.set('role', role);
+    const qs = params.toString();
+    return request(`/admin/conflicts/users${qs ? `?${qs}` : ''}`);
+  },
+
   createBan: (payload) => request('/admin/conflicts/bans', {
     method: 'POST',
     body: JSON.stringify(payload)

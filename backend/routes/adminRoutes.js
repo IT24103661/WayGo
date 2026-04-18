@@ -12,6 +12,7 @@ const {
   getRefundRequests,
   updateRefundRequest,
   getBans,
+  getConflictUsers,
   createBan,
   updateBan,
   getConfig,
@@ -35,6 +36,7 @@ router.get('/conflicts/refunds', getRefundRequests);
 router.patch('/conflicts/refunds/:id', updateRefundRequest);
 
 router.get('/conflicts/bans', getBans);
+router.get('/conflicts/users', getConflictUsers);
 router.post('/conflicts/bans', createBan);
 router.patch('/conflicts/bans/:id', updateBan);
 
