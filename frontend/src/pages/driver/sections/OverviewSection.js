@@ -10,17 +10,35 @@ import {
 import { useDriverAPI } from '../../../hooks/useDriverAPI';
 
 const STATUS_OPTIONS = ['Online', 'Offline', 'On Trip'];
+const DRIVER_STATUS_KEY = 'waygo_driver_status';
+
+const getInitialStatus = () => {
+  if (typeof window === 'undefined') return 'Offline';
+  const cached = window.localStorage.getItem(DRIVER_STATUS_KEY);
+  return STATUS_OPTIONS.includes(cached) ? cached : 'Offline';
+};
 
 export default function OverviewSection() {
-  const [status, setStatus] = useState('Offline');
+  const [status, setStatus] = useState(getInitialStatus);
   const [availableJobs, setAvailableJobs] = useState([]);
   const [myJobs, setMyJobs] = useState([]);
-  const { getAvailableJobs, getMyJobs, updateStatus, updateJobStatus } = useDriverAPI();
+  const { getAvailableJobs, getMyJobs, getStatus, updateStatus, updateJobStatus } = useDriverAPI();
 
   useEffect(() => {
     loadJobs();
+    syncStatus();
     // eslint-disable-next-line
   }, []);
+
+  const syncStatus = async () => {
+    const serverStatus = await getStatus();
+    if (STATUS_OPTIONS.includes(serverStatus)) {
+      setStatus(serverStatus);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(DRIVER_STATUS_KEY, serverStatus);
+      }
+    }
+  };
 
   const loadJobs = async () => {
     const avail = await getAvailableJobs();
@@ -31,8 +49,13 @@ export default function OverviewSection() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateStatus(newStatus);
-      setStatus(newStatus);
+      const response = await updateStatus(newStatus);
+      const savedStatus = response?.data?.status;
+      const nextStatus = STATUS_OPTIONS.includes(savedStatus) ? savedStatus : newStatus;
+      setStatus(nextStatus);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(DRIVER_STATUS_KEY, nextStatus);
+      }
     } catch (e) {
       alert(e.message || 'Failed to update status');
     }

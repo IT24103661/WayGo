@@ -31,7 +31,7 @@ exports.updateStatus = async (req, res) => {
       };
     }
 
-    const driver = await User.findByIdAndUpdate(req.user.userId, updates, { new: true }).select('-password');
+    const driver = await User.findByIdAndUpdate(req.user.userId, updates, { returnDocument: 'after' }).select('-password');
 
     if (!driver) {
       return res.status(404).json({ message: 'Driver not found.' });
@@ -43,6 +43,24 @@ exports.updateStatus = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Server error updating driver status.' });
+  }
+};
+
+exports.getStatus = async (req, res) => {
+  try {
+    const driver = await User.findById(req.user.userId).select('status');
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found.' });
+    }
+
+    return res.json({
+      message: 'Driver status fetched.',
+      data: {
+        status: driver.status || 'Offline'
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching driver status.' });
   }
 };
 

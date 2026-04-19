@@ -104,6 +104,24 @@ export function useDriverAPI() {
     }
   };
 
+  const getStatus = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/driver/status`, {
+        headers: getAuthHeaders()
+      });
+      const json = await parseResponse(res);
+      ensureSuccess(res, json, 'Failed to fetch driver status');
+      return json?.data?.status || 'Offline';
+    } catch (err) {
+      setError(err.message);
+      return 'Offline';
+    } finally {
+      setLoading(false);
+    }
+  }, [ensureSuccess, parseResponse]);
+
   const acceptJob = async (bookingId) => {
     setLoading(true);
     setError(null);
@@ -225,6 +243,7 @@ export function useDriverAPI() {
     error,
     getAvailableJobs,
     getMyJobs,
+    getStatus,
     updateStatus,
     acceptJob,
     updateJobStatus,

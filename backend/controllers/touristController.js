@@ -555,7 +555,7 @@ exports.markTouristNotificationRead = async (req, res) => {
     const notification = await TouristNotification.findOneAndUpdate(
       { _id: req.params.id, tourist: req.user.userId },
       { isRead: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!notification) {
