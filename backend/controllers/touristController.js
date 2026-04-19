@@ -6,6 +6,8 @@ const Tour = require('../models/Tour');
 const Review = require('../models/Review');
 const FleetNotification = require('../models/FleetNotification');
 const TouristNotification = require('../models/TouristNotification');
+const EmergencyAlert = require('../models/EmergencyAlert');
+const AdminAuditLog = require('../models/AdminAuditLog');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\d{10}$/;
@@ -859,5 +861,88 @@ exports.deleteReview = async (req, res) => {
     res.json({ message: 'Review deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// ==========================================
+// EMERGENCY SOS
+// ==========================================
+
+// @desc    Trigger emergency SOS alert
+// @route   POST /api/tourist/sos
+// @access  Private (Tourist only)
+exports.sendSOSAlert = async (req, res) => {
+  try {
+    const { latitude, longitude, accuracy, emergencyType = 'Safety', note = '' } = req.body || {};
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const acc = accuracy === undefined || accuracy === null ? null : Number(accuracy);
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return res.status(400).json({ message: 'latitude must be a valid number between -90 and 90.' });
+    }
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+      return res.status(400).json({ message: 'longitude must be a valid number between -180 and 180.' });
+    }
+    if (acc !== null && (!Number.isFinite(acc) || acc < 0 || acc > 100000)) {
+      return res.status(400).json({ message: 'accuracy must be between 0 and 100000 meters when provided.' });
+    }
+
+    const safeType = ['Medical', 'Safety', 'Accident', 'Other'].includes(String(emergencyType))
+      ? String(emergencyType)
+      : 'Safety';
+    const safeNote = cleanText(note).slice(0, 500);
+
+    const oneMinuteAgo = new Date(Date.now() - (60 * 1000));
+    const hasRecentActiveAlert = await EmergencyAlert.exists({
+      tourist: req.user.userId,
+      status: 'Active',
+      createdAt: { $gte: oneMinuteAgo }
+    });
+
+    if (hasRecentActiveAlert) {
+      return res.status(429).json({ message: 'An SOS alert was sent recently. Please wait a moment before sending another.' });
+    }
+
+    const alert = await EmergencyAlert.create({
+      tourist: req.user.userId,
+      latitude: lat,
+      longitude: lng,
+      accuracy: acc,
+      emergencyType: safeType,
+      note: safeNote,
+      status: 'Active'
+    });
+
+    await AdminAuditLog.create({
+      actor: req.user.userId,
+      action: 'EMERGENCY_SOS_CREATED',
+      targetType: 'EmergencyAlert',
+      targetId: String(alert._id),
+      after: {
+        latitude: alert.latitude,
+        longitude: alert.longitude,
+        accuracy: alert.accuracy,
+        emergencyType: alert.emergencyType,
+        status: alert.status
+      },
+      meta: {
+        source: 'tourist-sos'
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'SOS alert sent to WayGo Admin. Contact local emergency services immediately if needed.',
+      data: {
+        id: alert._id,
+        status: alert.status,
+        createdAt: alert.createdAt,
+        emergencyHotline: '119'
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error sending SOS alert.' });
   }
 };

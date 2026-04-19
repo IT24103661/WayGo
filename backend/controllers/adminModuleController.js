@@ -8,6 +8,7 @@ const PlatformConfig = require('../models/PlatformConfig');
 const RefundRequest = require('../models/RefundRequest');
 const AdminBan = require('../models/AdminBan');
 const AdminAuditLog = require('../models/AdminAuditLog');
+const EmergencyAlert = require('../models/EmergencyAlert');
 
 const STAFF_ROLES = ['TourManager', 'FleetManager'];
 const BAN_TARGET_ROLES = ['Tourist', 'Driver', 'TourManager', 'FleetManager'];
@@ -737,5 +738,75 @@ exports.getAuditLogs = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Server error fetching audit logs.' });
+  }
+};
+
+exports.getEmergencyAlerts = async (req, res) => {
+  try {
+    const { status = '', page = 1, limit = 20 } = req.query;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+    const query = {};
+    if (['Active', 'Resolved'].includes(String(status))) {
+      query.status = String(status);
+    }
+
+    const [rows, total] = await Promise.all([
+      EmergencyAlert.find(query)
+        .populate('tourist', 'name email phone')
+        .populate('resolvedBy', 'name email role')
+        .sort({ createdAt: -1 })
+        .skip((normalizedPage - 1) * normalizedLimit)
+        .limit(normalizedLimit),
+      EmergencyAlert.countDocuments(query)
+    ]);
+
+    return res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / normalizedLimit))
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching emergency alerts.' });
+  }
+};
+
+exports.resolveEmergencyAlert = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alert = await EmergencyAlert.findById(id);
+
+    if (!alert) {
+      return res.status(404).json({ message: 'Emergency alert not found.' });
+    }
+
+    const before = { status: alert.status, resolvedAt: alert.resolvedAt };
+    alert.status = 'Resolved';
+    alert.resolvedBy = req.user.userId;
+    alert.resolvedAt = new Date();
+    await alert.save();
+
+    await logAdminAction({
+      actor: req.user.userId,
+      action: 'EMERGENCY_SOS_RESOLVED',
+      targetType: 'EmergencyAlert',
+      targetId: alert._id,
+      before,
+      after: { status: alert.status, resolvedAt: alert.resolvedAt }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Emergency alert marked as resolved.',
+      data: alert
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error resolving emergency alert.' });
   }
 };

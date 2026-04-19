@@ -17,7 +17,9 @@ const {
   updateBan,
   getConfig,
   updateConfig,
-  getAuditLogs
+  getAuditLogs,
+  getEmergencyAlerts,
+  resolveEmergencyAlert
 } = require('../controllers/adminModuleController');
 
 router.use(protect);
@@ -44,5 +46,7 @@ router.get('/config', getConfig);
 router.put('/config', updateConfig);
 
 router.get('/audit-logs', getAuditLogs);
+router.get('/emergency-alerts', getEmergencyAlerts);
+router.patch('/emergency-alerts/:id/resolve', resolveEmergencyAlert);
 
 module.exports = router;

@@ -1,5 +1,7 @@
 import { MdLocalTaxi, MdTour, MdPeople, MdBookmark, MdArrowForward, MdAccessTime, MdLocationOn } from 'react-icons/md';
+import { useState } from 'react';
 import imgSigiriya from '../../../assets/images/Sigiriya.jpg';
+import { useTouristEmergency } from '../../../hooks/useTouristAPI';
 
 const STATS = [
   { label: 'Completed Trips', value: '12', icon: MdLocalTaxi, gradient: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-500/20', change: '+2 this month' },
@@ -15,6 +17,90 @@ const RECENT_BOOKINGS = [
 ];
 
 export default function OverviewSection() {
+  const { sendSOSAlert, loading: sosLoading } = useTouristEmergency();
+  const [sosMessage, setSosMessage] = useState('');
+
+  const getPosition = (options) => {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  };
+
+  const mapGeoErrorToMessage = (error) => {
+    if (!error) return 'Unable to fetch current location. Please try again.';
+
+    if (error.code === error.PERMISSION_DENIED) {
+      return 'Location permission denied. Enable GPS/location access and try again.';
+    }
+    if (error.code === error.POSITION_UNAVAILABLE) {
+      return 'Location unavailable. Please check GPS/network and try again.';
+    }
+    if (error.code === error.TIMEOUT) {
+      return 'Location request timed out. Move to an open area and try again.';
+    }
+    return 'Unable to fetch current location. Please try again.';
+  };
+
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      throw new Error('Geolocation is not supported on this device/browser.');
+    }
+
+    const isSecureContextAllowed = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isSecureContextAllowed) {
+      throw new Error('Location access requires HTTPS. Open this app on a secure (https) connection.');
+    }
+
+    try {
+      // 1) Try high-accuracy live location.
+      return await getPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      });
+    } catch (firstError) {
+      if (firstError.code === firstError.PERMISSION_DENIED) {
+        throw new Error(mapGeoErrorToMessage(firstError));
+      }
+
+      try {
+        // 2) Fallback: relaxed request can succeed faster on unstable GPS.
+        return await getPosition({
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 60000
+        });
+      } catch (secondError) {
+        throw new Error(mapGeoErrorToMessage(secondError));
+      }
+    }
+  };
+
+  const handleSOS = async () => {
+    try {
+      setSosMessage('Collecting your live location...');
+      const position = await getCurrentLocation();
+
+      const payload = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        emergencyType: 'Safety',
+        note: 'SOS triggered from Tourist Dashboard.'
+      };
+
+      const result = await sendSOSAlert(payload);
+      setSosMessage(result?.message || 'SOS alert sent to WayGo Admin.');
+
+      const shouldCall = window.confirm('SOS sent to WayGo Admin. Call local emergency hotline now?');
+      if (shouldCall) {
+        window.location.href = 'tel:119';
+      }
+    } catch (error) {
+      setSosMessage(error.message || 'Failed to send SOS alert. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-8 font-sans animate-fade-in-up pb-10">
       
@@ -50,7 +136,19 @@ export default function OverviewSection() {
               <button className="px-8 py-4 rounded-2xl font-bold text-stone-700 bg-white hover:bg-stone-50 border-2 border-stone-200 hover:border-stone-300 transition-all duration-300">
                 View Travel Map
               </button>
+              <button
+                onClick={handleSOS}
+                disabled={sosLoading}
+                className="px-8 py-4 rounded-2xl font-black text-white bg-rose-600 hover:bg-rose-700 border-2 border-rose-500 transition-all duration-300 shadow-[0_10px_25px_rgba(225,29,72,0.35)] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {sosLoading ? 'Sending SOS...' : 'Emergency SOS'}
+              </button>
             </div>
+            {sosMessage && (
+              <p className="mt-4 text-sm font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 max-w-2xl">
+                {sosMessage}
+              </p>
+            )}
           </div>
         </div>
 

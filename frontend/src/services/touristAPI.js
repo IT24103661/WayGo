@@ -148,6 +148,11 @@ export const touristAPI = {
     body: JSON.stringify(payload)
   }),
 
+  sendSOSAlert: (payload) => request('/tourist/sos', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+
   updateSupportRequest: (requestId, payload) => request(`/tourist/support/${requestId}`, {
     method: 'PUT',
     body: JSON.stringify(payload)

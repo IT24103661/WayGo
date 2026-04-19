@@ -19,6 +19,7 @@ const {
   markTouristNotificationRead,
   markAllTouristNotificationsRead,
   deleteTouristNotification,
+  sendSOSAlert,
   getReviews,
   createReview,
   updateReview,
@@ -81,6 +82,9 @@ router.route('/notifications/:id')
 
 router.route('/notifications/read-all')
   .patch(markAllTouristNotificationsRead);
+
+router.route('/sos')
+  .post(sendSOSAlert);
 
 // 2b. Tourist Support Routes
 router.route('/support')

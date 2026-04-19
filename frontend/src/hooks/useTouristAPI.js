@@ -474,3 +474,28 @@ export const useTouristSupport = () => {
     refetch: fetchRequests
   };
 };
+
+export const useTouristEmergency = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const sendSOSAlert = async (payload) => {
+    try {
+      setLoading(true);
+      const result = await touristAPI.sendSOSAlert(payload);
+      setError(null);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    sendSOSAlert,
+    loading,
+    error
+  };
+};
