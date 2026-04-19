@@ -8,9 +8,11 @@ const FleetNotification = require('../models/FleetNotification');
 const TouristNotification = require('../models/TouristNotification');
 const EmergencyAlert = require('../models/EmergencyAlert');
 const AdminAuditLog = require('../models/AdminAuditLog');
+const Sentiment = require('sentiment');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\d{10}$/;
+const sentimentAnalyzer = new Sentiment();
 
 const cleanText = (value) => String(value || '').trim();
 
@@ -117,6 +119,39 @@ const sanitizePackageOptions = (packageOptions = {}) => {
       finalTotal: Number(packageOptions.pricing?.finalTotal) || 0
     }
   };
+};
+
+const deriveSentimentLabel = (score) => {
+  if (score > 0) return 'Positive';
+  if (score < 0) return 'Negative';
+  return 'Neutral';
+};
+
+const getSentimentPayload = (text) => {
+  const result = sentimentAnalyzer.analyze(String(text || ''));
+  const score = Number.isFinite(result?.score) ? result.score : 0;
+  return {
+    sentimentScore: score,
+    sentimentLabel: deriveSentimentLabel(score)
+  };
+};
+
+const updateDriverFlagStatus = async (driverId) => {
+  if (!driverId) return;
+
+  const driver = await User.findOne({ _id: driverId, role: 'Driver' }).select('_id isFlagged');
+  if (!driver) return;
+
+  const latestThree = await Review.find({ driver: driver._id })
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .select('sentimentLabel');
+
+  const shouldFlag = latestThree.length >= 3 && latestThree.every((item) => item.sentimentLabel === 'Negative');
+  if (driver.isFlagged !== shouldFlag) {
+    driver.isFlagged = shouldFlag;
+    await driver.save();
+  }
 };
 
 // ==========================================
@@ -784,7 +819,7 @@ exports.getReviews = async (req, res) => {
 
 exports.createReview = async (req, res) => {
   try {
-    const { tourName, rating, text } = req.body;
+    const { tourName, rating, text, driverId = null } = req.body;
 
     const safeTourName = cleanText(tourName || 'General Tour');
     const safeText = cleanText(text);
@@ -800,12 +835,32 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ message: 'tourName should be 120 characters or fewer.' });
     }
 
+    let driver = null;
+    if (driverId) {
+      if (!/^[a-f\d]{24}$/i.test(String(driverId))) {
+        return res.status(400).json({ message: 'driverId must be a valid ID when provided.' });
+      }
+      driver = await User.findOne({ _id: driverId, role: 'Driver' }).select('_id');
+      if (!driver) {
+        return res.status(404).json({ message: 'Driver not found for provided driverId.' });
+      }
+    }
+
+    const sentimentPayload = getSentimentPayload(safeText);
+
     const review = await Review.create({
       tourist: req.user.userId,
+      driver: driver ? driver._id : null,
       tourName: safeTourName,
       rating: safeRating,
-      text: safeText
+      text: safeText,
+      sentimentScore: sentimentPayload.sentimentScore,
+      sentimentLabel: sentimentPayload.sentimentLabel
     });
+
+    if (driver) {
+      await updateDriverFlagStatus(driver._id);
+    }
     res.status(201).json(review);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -833,6 +888,9 @@ exports.updateReview = async (req, res) => {
         return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
       }
       review.text = safeText;
+      const sentimentPayload = getSentimentPayload(safeText);
+      review.sentimentScore = sentimentPayload.sentimentScore;
+      review.sentimentLabel = sentimentPayload.sentimentLabel;
     }
     if (req.body.tourName !== undefined) {
       const safeTourName = cleanText(req.body.tourName || 'General Tour');
@@ -843,6 +901,9 @@ exports.updateReview = async (req, res) => {
     }
     
     await review.save();
+    if (review.driver) {
+      await updateDriverFlagStatus(review.driver);
+    }
     res.json(review);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -857,7 +918,11 @@ exports.deleteReview = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     
+    const driverId = review.driver;
     await review.deleteOne();
+    if (driverId) {
+      await updateDriverFlagStatus(driverId);
+    }
     res.json({ message: 'Review deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

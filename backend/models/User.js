@@ -94,6 +94,11 @@ const userSchema = new mongoose.Schema({
     isTourCertified: {
         type: Boolean,
         default: false
+    },
+    isFlagged: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true

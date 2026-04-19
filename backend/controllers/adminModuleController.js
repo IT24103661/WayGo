@@ -9,6 +9,7 @@ const RefundRequest = require('../models/RefundRequest');
 const AdminBan = require('../models/AdminBan');
 const AdminAuditLog = require('../models/AdminAuditLog');
 const EmergencyAlert = require('../models/EmergencyAlert');
+const Review = require('../models/Review');
 
 const STAFF_ROLES = ['TourManager', 'FleetManager'];
 const BAN_TARGET_ROLES = ['Tourist', 'Driver', 'TourManager', 'FleetManager'];
@@ -808,5 +809,57 @@ exports.resolveEmergencyAlert = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Server error resolving emergency alert.' });
+  }
+};
+
+exports.getSentimentReviews = async (req, res) => {
+  try {
+    const { sentiment = '', page = 1, limit = 20 } = req.query;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+    const query = {};
+    if (['Positive', 'Neutral', 'Negative'].includes(String(sentiment))) {
+      query.sentimentLabel = String(sentiment);
+    }
+
+    const [rows, total] = await Promise.all([
+      Review.find(query)
+        .populate('tourist', 'name email')
+        .populate('driver', 'name email isFlagged')
+        .sort({ createdAt: -1 })
+        .skip((normalizedPage - 1) * normalizedLimit)
+        .limit(normalizedLimit),
+      Review.countDocuments(query)
+    ]);
+
+    return res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / normalizedLimit))
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching sentiment reviews.' });
+  }
+};
+
+exports.getFlaggedDrivers = async (req, res) => {
+  try {
+    const drivers = await User.find({ role: 'Driver', isFlagged: true })
+      .select('name email phone status isFlagged updatedAt')
+      .sort({ updatedAt: -1 });
+
+    return res.json({
+      success: true,
+      count: drivers.length,
+      data: drivers
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching flagged drivers.' });
   }
 };

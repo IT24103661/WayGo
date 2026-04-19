@@ -9,6 +9,7 @@ import ConfigSection     from './sections/ConfigSection';
 import SalaryApprovalsSection from './sections/SalaryApprovalsSection';
 import ConflictsSection  from './sections/ConflictsSection';
 import ProfileSection    from './sections/ProfileSection';
+import AlertsSection     from './sections/AlertsSection';
 import useAdminGuard     from './useAdminGuard';
 import './adminMotion.css';
 
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
     analytics:  { title: 'System Analytics',      subtitle: 'Revenue, users and system health' },
     config:     { title: 'Global Configuration',  subtitle: 'Platform rates and settings' },
     salaries:   { title: 'Salary Approvals',      subtitle: 'Approve pending fleet salary requests' },
+    alerts:     { title: 'Sentiment Alerts',      subtitle: 'Monitor review sentiment and flagged drivers' },
     conflicts:  { title: 'Conflict Resolution',   subtitle: 'Refunds and user bans' },
     profile:    { title: 'Admin Profile',         subtitle: 'Update your personal account details' },
   };
@@ -49,6 +51,7 @@ export default function AdminDashboard() {
             <Route path="analytics"  element={<AnalyticsSection />} />
             <Route path="config"     element={<ConfigSection />} />
             <Route path="salaries"   element={<SalaryApprovalsSection />} />
+            <Route path="alerts"     element={<AlertsSection />} />
             <Route path="conflicts"  element={<ConflictsSection />} />
             <Route path="profile"    element={<ProfileSection />} />
           </Routes>

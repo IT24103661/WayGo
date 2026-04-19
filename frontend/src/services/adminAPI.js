@@ -128,6 +128,28 @@ export const adminAPI = {
     return request(`/admin/audit-logs?${params.toString()}`);
   },
 
+  getEmergencyAlerts: ({ status = '', page = 1, limit = 20 } = {}) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    return request(`/admin/emergency-alerts?${params.toString()}`);
+  },
+
+  resolveEmergencyAlert: (alertId) => request(`/admin/emergency-alerts/${alertId}/resolve`, {
+    method: 'PATCH'
+  }),
+
+  getSentimentReviews: ({ sentiment = '', page = 1, limit = 20 } = {}) => {
+    const params = new URLSearchParams();
+    if (sentiment) params.set('sentiment', sentiment);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    return request(`/admin/alerts/reviews?${params.toString()}`);
+  },
+
+  getFlaggedDrivers: () => request('/admin/alerts/flagged-drivers'),
+
   getSalaryApprovals: (status) => request(`/users/admin/salaries${status ? `?status=${status}` : ''}`),
 
   getSalaryCandidates: (role) => request(`/users/admin/salaries/candidates${role ? `?role=${encodeURIComponent(role)}` : ''}`),
