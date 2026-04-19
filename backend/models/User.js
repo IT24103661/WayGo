@@ -16,6 +16,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    loginAttempts: {
+        type: Number,
+        default: 0
+    },
+    lockUntil: {
+        type: Date,
+        default: null
+    },
     role: {
         type: String,
         enum: ['Tourist', 'Driver', 'TourManager', 'FleetManager', 'SystemAdmin'],
@@ -86,6 +94,11 @@ const userSchema = new mongoose.Schema({
     isTourCertified: {
         type: Boolean,
         default: false
+    },
+    isFlagged: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true

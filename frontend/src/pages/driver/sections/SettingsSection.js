@@ -156,8 +156,8 @@ export default function SettingsSection() {
 
         if (!trimmedPhone) {
             errors.phone = 'Phone number is required.';
-        } else if (!/^\d{11}$/.test(trimmedPhone)) {
-            errors.phone = 'Phone number must contain exactly 11 digits (numbers only).';
+        } else if (!/^\d{10}$/.test(trimmedPhone)) {
+            errors.phone = 'Phone number must contain exactly 10 digits (numbers only).';
         }
 
         setFormErrors(errors);
@@ -357,14 +357,14 @@ export default function SettingsSection() {
                                                     }));
                                                 }
                                                 const value = key === 'phone'
-                                                    ? rawValue.replace(/\D/g, '').slice(0, 11)
+                                                    ? rawValue.replace(/\D/g, '').slice(0, 10)
                                                     : rawValue;
                                                 setFormData({ ...formData, [key]: value });
                                             }}
                                             type={key === 'email' ? 'email' : 'text'}
                                             inputMode={key === 'phone' ? 'numeric' : undefined}
                                             pattern={key === 'phone' ? '[0-9]*' : undefined}
-                                            maxLength={key === 'phone' ? 11 : undefined}
+                                            maxLength={key === 'phone' ? 10 : undefined}
                                         />
                                         {formErrors[key] && <p className='text-xs text-rose-600 mt-1'>{formErrors[key]}</p>}
                                     </>

@@ -17,6 +17,20 @@ const asNumber = (value, fallback = 0) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString();
+};
+
+const todayDateISO = () => new Date().toISOString().slice(0, 10);
+
+const isPastDateValue = (value) => {
+  if (!value) return false;
+  return value < todayDateISO();
+};
+
 export default function SalaryApprovalsSection() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [error, setError] = useState('');
@@ -35,8 +49,13 @@ export default function SalaryApprovalsSection() {
   });
   const [reviewRows, setReviewRows] = useState([]);
   const [savingGenerated, setSavingGenerated] = useState(false);
+  const [savingRowId, setSavingRowId] = useState('');
   const [editingReviewId, setEditingReviewId] = useState('');
   const [reviewDraft, setReviewDraft] = useState(null);
+  const [savedRows, setSavedRows] = useState([]);
+  const [loadingSavedRows, setLoadingSavedRows] = useState(false);
+  const [updatingSalaryId, setUpdatingSalaryId] = useState('');
+  const [salaryViewFilter, setSalaryViewFilter] = useState('Paid');
 
   const fetchRoleCandidates = useCallback(async (role) => {
     // Preferred source: dedicated salary candidate endpoint.
@@ -105,6 +124,23 @@ export default function SalaryApprovalsSection() {
     fetchStaff();
   }, [fetchStaff]);
 
+  const fetchSavedRows = useCallback(async (filter = salaryViewFilter) => {
+    try {
+      setLoadingSavedRows(true);
+      const status = filter === 'All' ? '' : filter;
+      const result = await adminAPI.getSalaryApprovals(status);
+      setSavedRows(result?.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load saved salary rows.');
+    } finally {
+      setLoadingSavedRows(false);
+    }
+  }, [salaryViewFilter]);
+
+  useEffect(() => {
+    fetchSavedRows(salaryViewFilter);
+  }, [fetchSavedRows, salaryViewFilter]);
+
   const roleStaff = useMemo(() => staffByRole[generation.role] || [], [staffByRole, generation.role]);
 
   useEffect(() => {
@@ -150,6 +186,12 @@ export default function SalaryApprovalsSection() {
   };
 
   const generateReviewRows = () => {
+    if (isPastDateValue(generation.paymentDate)) {
+      setError('Payment date cannot be in the past.');
+      setMessage('');
+      return;
+    }
+
     const selectedRole = generation.role;
     const selectedRule = salaryRules[selectedRole];
     const targetMonth = generation.paymentDate ? generation.paymentDate.slice(0, 7) : getCurrentMonth();
@@ -242,12 +284,6 @@ export default function SalaryApprovalsSection() {
       return;
     }
 
-    if (generation.role !== 'Driver') {
-      setError('Current payroll persistence supports Driver salaries only.');
-      setMessage('');
-      return;
-    }
-
     try {
       setSavingGenerated(true);
       setError('');
@@ -255,9 +291,13 @@ export default function SalaryApprovalsSection() {
 
       await adminAPI.createSalaryApprovals({
         rows: reviewRows.map((row) => ({
-          driverId: row.employeeId,
+          employeeId: row.employeeId,
+          role: row.role,
           month: row.month,
           baseSalary: asNumber(row.baseSalary),
+          performanceValue: asNumber(row.performanceValue),
+          performanceRate: asNumber(row.performanceRate),
+          performancePay: asNumber(row.performanceValue) * asNumber(row.performanceRate),
           bonus: asNumber(row.bonus),
           deductions: asNumber(row.deductions),
           notes: row.notes || '',
@@ -267,10 +307,66 @@ export default function SalaryApprovalsSection() {
       });
 
       setMessage('Generated rows saved successfully as Pending.');
+      await fetchSavedRows('All');
     } catch (err) {
       setError(err.message || 'Failed to save generated salary rows.');
     } finally {
       setSavingGenerated(false);
+    }
+  };
+
+  const saveSingleGeneratedRow = async (row) => {
+    if (!row) return;
+    try {
+      setSavingRowId(row.id);
+      setError('');
+      setMessage('');
+
+      await adminAPI.createSalaryApprovals({
+        rows: [{
+          employeeId: row.employeeId,
+          role: row.role,
+          month: row.month,
+          baseSalary: asNumber(row.baseSalary),
+          performanceValue: asNumber(row.performanceValue),
+          performanceRate: asNumber(row.performanceRate),
+          performancePay: asNumber(row.performanceValue) * asNumber(row.performanceRate),
+          bonus: asNumber(row.bonus),
+          deductions: asNumber(row.deductions),
+          notes: row.notes || '',
+          paymentStatus: 'Pending',
+          paymentDate: row.paymentDate || undefined
+        }]
+      });
+
+      setMessage(`Saved ${row.employeeName} (${row.month}) as Pending.`);
+      await fetchSavedRows('All');
+    } catch (err) {
+      setError(err.message || 'Failed to save salary row.');
+    } finally {
+      setSavingRowId('');
+    }
+  };
+
+  const markSalaryAsPaid = async (salaryId) => {
+    if (!salaryId) return;
+    try {
+      setUpdatingSalaryId(String(salaryId));
+      setError('');
+      setMessage('');
+
+      const today = new Date().toISOString().slice(0, 10);
+      await adminAPI.updateSalaryStatus(salaryId, {
+        paymentStatus: 'Paid',
+        paymentDate: today
+      });
+
+      setMessage('Salary marked as Paid successfully.');
+      await fetchSavedRows(salaryViewFilter);
+    } catch (err) {
+      setError(err.message || 'Failed to mark salary as paid.');
+    } finally {
+      setUpdatingSalaryId('');
     }
   };
 
@@ -379,6 +475,7 @@ export default function SalaryApprovalsSection() {
             <input
               type="date"
               value={generation.paymentDate}
+              min={todayDateISO()}
               onChange={(e) => setGeneration((prev) => ({ ...prev, paymentDate: e.target.value }))}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             />
@@ -507,6 +604,14 @@ export default function SalaryApprovalsSection() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        onClick={() => saveSingleGeneratedRow(row)}
+                        disabled={savingRowId === row.id}
+                        className="rounded-lg border border-emerald-300 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {savingRowId === row.id ? 'Saving...' : 'Save Row'}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => startEditReviewRow(row)}
                         className="rounded-lg border border-indigo-300 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
                       >
@@ -524,6 +629,104 @@ export default function SalaryApprovalsSection() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white/85 backdrop-blur-sm border border-white/70 rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Saved Salary Records</h3>
+            <p className="text-sm text-slate-600 mt-1">Track salaries one by one and keep a clear list of paid salaries.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {['Paid', 'Pending', 'All'].map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setSalaryViewFilter(filter)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                  salaryViewFilter === filter
+                    ? 'border-cyan-400 bg-cyan-50 text-cyan-700'
+                    : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => fetchSavedRows(salaryViewFilter)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-slate-700 uppercase text-xs">
+              <tr>
+                <th className="text-left px-4 py-3">Employee</th>
+                <th className="text-left px-4 py-3">Role</th>
+                <th className="text-left px-4 py-3">Month</th>
+                <th className="text-left px-4 py-3">Base</th>
+                <th className="text-left px-4 py-3">Perf. Pay</th>
+                <th className="text-left px-4 py-3">Bonus</th>
+                <th className="text-left px-4 py-3">Deductions</th>
+                <th className="text-left px-4 py-3">Net</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Paid At</th>
+                <th className="text-left px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loadingSavedRows && (
+                <tr>
+                  <td colSpan={11} className="px-4 py-4 text-slate-500">Loading saved salaries...</td>
+                </tr>
+              )}
+              {!loadingSavedRows && savedRows.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-4 py-4 text-slate-500">No salary records found for selected filter.</td>
+                </tr>
+              )}
+              {!loadingSavedRows && savedRows.map((row) => {
+                const isPaid = row.paymentStatus === 'Paid';
+                const employeeName = row?.employee?.name || row?.driver?.name || 'Employee';
+                const employeeRole = row?.employeeRole || row?.employee?.role || 'Driver';
+                return (
+                  <tr key={row._id}>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{employeeName}</td>
+                    <td className="px-4 py-3 text-slate-700">{employeeRole}</td>
+                    <td className="px-4 py-3 text-slate-700">{row.month || '-'}</td>
+                    <td className="px-4 py-3 text-slate-700">LKR {asNumber(row.baseSalary).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-slate-700">LKR {asNumber(row.performancePay).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-slate-700">LKR {asNumber(row.bonus).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-slate-700">LKR {asNumber(row.deductions).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">LKR {asNumber(row.netSalary).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {row.paymentStatus || 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{formatDateTime(row.paidAt || row.paymentDate)}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => markSalaryAsPaid(row._id)}
+                        disabled={isPaid || updatingSalaryId === String(row._id)}
+                        className="rounded-lg border border-emerald-300 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingSalaryId === String(row._id) ? 'Updating...' : (isPaid ? 'Paid' : 'Mark Paid')}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

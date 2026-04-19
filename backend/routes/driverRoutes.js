@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const {
 	updateStatus,
+	getStatus,
 	acceptRide,
 	getAvailableJobs,
 	getMyJobs,
@@ -21,6 +22,7 @@ router.use(protect);
 router.use(authorizeRoles('Driver'));
 
 // Driver Profile / Status
+router.get('/status', getStatus);
 router.patch('/status', updateStatus);
 router.get('/profile/vehicle', getMyVehicleProfile);
 router.put('/profile/vehicle', updateMyVehicleProfile);

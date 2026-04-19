@@ -566,7 +566,7 @@ exports.markNotificationRead = async (req, res) => {
     const notification = await FleetNotification.findOneAndUpdate(
       { _id: id, fleetManager: req.user.userId },
       { isRead: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!notification) {

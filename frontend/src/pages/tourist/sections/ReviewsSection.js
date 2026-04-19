@@ -4,17 +4,65 @@ import { touristAPI as api } from "../../../services/touristAPI";
 
 export default function ReviewsSection() {
   const [reviews, setReviews] = useState([]);
+  const [completedRides, setCompletedRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentReview, setCurrentReview] = useState(null);
-  const [formData, setFormData] = useState({ tourName: "", rating: 5, text: "" });
+  const [formData, setFormData] = useState({ tourName: "", score: 5, text: "", driverId: "", bookingId: "" });
   const [formError, setFormError] = useState("");
+
+  const mapRideFromBooking = (booking) => {
+    const pickup = String(booking?.pickupLocation || '').trim();
+    const dropoff = String(booking?.dropoffLocation || '').trim();
+    const routeLabel = pickup && dropoff ? `${pickup} -> ${dropoff}` : pickup || dropoff || 'Ride';
+    const pickupDate = booking?.pickupTime ? new Date(booking.pickupTime).toLocaleDateString() : '';
+    const tourTitle = booking?.packageOptions?.tourTitle || booking?.tourPackage?.title || routeLabel;
+    const driverName = booking?.assignedDriver?.name || '';
+
+    return {
+      bookingId: booking?._id || '',
+      driverId: booking?.assignedDriver?._id || '',
+      driverName,
+      tourName: tourTitle,
+      label: `${tourTitle} - Driver: ${driverName}${pickupDate ? ` - ${pickupDate}` : ''}`
+    };
+  };
+
+  const getInitialFormData = (rides = []) => {
+    const latestRide = rides[0] || null;
+    return {
+      tourName: latestRide?.tourName || '',
+      score: 5,
+      text: '',
+      driverId: latestRide?.driverId || '',
+      bookingId: latestRide?.bookingId || ''
+    };
+  };
 
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const data = await api.getReviews();
-      setReviews(data);
+      const [reviewData, bookingData] = await Promise.all([
+        api.getReviews(),
+        api.getBookings()
+      ]);
+
+      setReviews(Array.isArray(reviewData) ? reviewData : []);
+
+      const rides = (Array.isArray(bookingData) ? bookingData : [])
+        .filter((booking) => String(booking?.status || '').toLowerCase() === 'completed')
+        .filter((booking) => Boolean(booking?.assignedDriver?._id))
+        .map(mapRideFromBooking)
+        .filter((ride) => ride.bookingId && ride.driverId)
+        .sort((a, b) => {
+          const aBooking = (Array.isArray(bookingData) ? bookingData : []).find((item) => item?._id === a.bookingId);
+          const bBooking = (Array.isArray(bookingData) ? bookingData : []).find((item) => item?._id === b.bookingId);
+          const aTime = new Date(aBooking?.pickupTime || aBooking?.createdAt || 0).getTime();
+          const bTime = new Date(bBooking?.pickupTime || bBooking?.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+
+      setCompletedRides(rides);
     } catch (error) {
       console.error("Error fetching reviews", error);
     } finally {
@@ -28,28 +76,48 @@ export default function ReviewsSection() {
 
   const openCreateModal = () => {
     setCurrentReview(null);
-    setFormData({ tourName: "", rating: 5, text: "" });
+    setFormData(getInitialFormData(completedRides));
     setFormError("");
     setIsModalOpen(true);
   };
 
   const openEditModal = (review) => {
     setCurrentReview(review);
-    setFormData({ tourName: review.tourName, rating: review.rating, text: review.text });
+    setFormData({
+      tourName: review.tourName,
+      score: Number(review.rating) || 5,
+      text: review.text,
+      driverId: review?.driver?._id || '',
+      bookingId: ''
+    });
     setFormError("");
     setIsModalOpen(true);
+  };
+
+  const handleRideSelect = (bookingId) => {
+    const selectedRide = completedRides.find((ride) => ride.bookingId === bookingId);
+    if (!selectedRide) {
+      setFormData((prev) => ({ ...prev, bookingId: '', driverId: '' }));
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      bookingId: selectedRide.bookingId,
+      driverId: selectedRide.driverId,
+      tourName: selectedRide.tourName || prev.tourName
+    }));
   };
 
   const validateForm = () => {
     const tourName = String(formData.tourName || "").trim();
     const text = String(formData.text || "").trim();
-    const rating = Number(formData.rating);
+    const score = Number(formData.score);
 
     if (!tourName || tourName.length > 120) {
       return "Tour/Activity name is required and should be 120 characters or fewer.";
     }
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return "Rating must be between 1 and 5.";
+    if (!Number.isInteger(score) || score < 1 || score > 5) {
+      return "Score must be between 1 and 5.";
     }
     if (text.length < 10 || text.length > 1000) {
       return "Review text must be between 10 and 1000 characters.";
@@ -82,14 +150,16 @@ export default function ReviewsSection() {
       if (currentReview) {
         await api.updateReview(currentReview._id, {
           tourName: formData.tourName.trim(),
-          rating: Number(formData.rating),
-          text: formData.text.trim()
+          score: Number(formData.score),
+          text: formData.text.trim(),
+          driverId: formData.driverId || undefined
         });
       } else {
         await api.createReview({
           tourName: formData.tourName.trim(),
-          rating: Number(formData.rating),
-          text: formData.text.trim()
+          score: Number(formData.score),
+          text: formData.text.trim(),
+          driverId: formData.driverId || undefined
         });
       }
       setIsModalOpen(false);
@@ -167,6 +237,32 @@ export default function ReviewsSection() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {!currentReview && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Completed Ride (Auto-selected)</label>
+                  <select
+                    value={formData.bookingId}
+                    onChange={(e) => handleRideSelect(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
+                  >
+                    {completedRides.length === 0 ? (
+                      <option value="">No completed rides with assigned drivers</option>
+                    ) : (
+                      <>
+                        {completedRides.map((ride) => (
+                          <option key={ride.bookingId} value={ride.bookingId}>{ride.label}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  {formData.driverId && (
+                    <p className="mt-2 text-xs font-semibold text-sky-700">
+                      Driver selected: {completedRides.find((ride) => ride.driverId === formData.driverId)?.driverName || 'Assigned driver'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tour/Activity Name</label>
                 <input
@@ -179,19 +275,21 @@ export default function ReviewsSection() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Score (1-5)</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       type="button"
                       key={star}
-                      onClick={() => setFormData({ ...formData, rating: star })}
+                      onClick={() => setFormData({ ...formData, score: star })}
                       className="focus:outline-none transition-transform hover:scale-110"
+                      aria-label={`Set score to ${star}`}
                     >
-                      <MdStar className={`text-3xl ${star <= formData.rating ? "text-yellow-400" : "text-gray-200"}`} />
+                      <MdStar className={`text-3xl ${star <= formData.score ? "text-yellow-400" : "text-gray-200"}`} />
                     </button>
                   ))}
                 </div>
+                <p className="mt-2 text-xs font-semibold text-gray-600">Selected score: {Number(formData.score)}/5</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>

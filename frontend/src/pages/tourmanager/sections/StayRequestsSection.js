@@ -17,6 +17,12 @@ const STAY_STATUS_DROPDOWN_OPTIONS = [
 
 const CHECKED_OUT_HIDE_AFTER_MS = 2 * 60 * 1000;
 
+const getTodayDateInput = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 export default function StayRequestsSection() {
   const [statusFilter, setStatusFilter] = useState('');
   const { requests, loading, error, allocateStay, deleteStayAllocation } = useTourManagerStayRequests(statusFilter);
@@ -24,6 +30,7 @@ export default function StayRequestsSection() {
   const [message, setMessage] = useState('');
   const [formState, setFormState] = useState({});
   const [now, setNow] = useState(Date.now());
+  const todayDate = getTodayDateInput();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -81,6 +88,11 @@ export default function StayRequestsSection() {
 
     if (new Date(state.checkInDate) >= new Date(state.checkOutDate)) {
       setMessage('Check-out date must be later than check-in date.');
+      return;
+    }
+
+    if (state.checkInDate < todayDate || state.checkOutDate < todayDate) {
+      setMessage('Stay dates must be today or future dates.');
       return;
     }
 
@@ -242,12 +254,14 @@ export default function StayRequestsSection() {
                   type="date"
                   value={currentForm.checkInDate}
                   onChange={(event) => updateBookingForm(booking._id, { checkInDate: event.target.value }, booking)}
+                  min={todayDate}
                   className="px-3 py-2.5 rounded-xl border border-cyan-200 text-sm"
                 />
                 <input
                   type="date"
                   value={currentForm.checkOutDate}
                   onChange={(event) => updateBookingForm(booking._id, { checkOutDate: event.target.value }, booking)}
+                  min={currentForm.checkInDate || todayDate}
                   className="px-3 py-2.5 rounded-xl border border-cyan-200 text-sm"
                 />
                 <button

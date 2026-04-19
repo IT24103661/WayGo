@@ -6,6 +6,12 @@ const reviewSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    driver: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+        index: true
+    },
     tourName: {
         type: String,
         required: true,
@@ -20,6 +26,16 @@ const reviewSchema = new mongoose.Schema({
     text: {
         type: String,
         required: true
+    },
+    sentimentScore: {
+        type: Number,
+        default: 0
+    },
+    sentimentLabel: {
+        type: String,
+        enum: ['Positive', 'Neutral', 'Negative'],
+        default: 'Neutral',
+        index: true
     },
     helpful: {
         type: Number,

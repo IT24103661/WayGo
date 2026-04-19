@@ -64,7 +64,7 @@ export default function ProfileSection() {
 
   const updateField = (key, value) => {
     setMessage('');
-    const nextValue = key === 'phone' ? String(value).replace(/\D/g, '').slice(0, 11) : value;
+    const nextValue = key === 'phone' ? String(value).replace(/\D/g, '').slice(0, 10) : value;
     setForm((prev) => ({ ...prev, [key]: nextValue }));
     setFieldErrors((prev) => ({ ...prev, [key]: '' }));
   };
@@ -100,8 +100,8 @@ export default function ProfileSection() {
       nextErrors.email = 'Email should be 120 characters or fewer.';
     }
 
-    if (!/^\d{11}$/.test(phone)) {
-      nextErrors.phone = 'Phone number must contain exactly 11 digits (numbers only).';
+    if (!/^\d{10}$/.test(phone)) {
+      nextErrors.phone = 'Phone number must contain exactly 10 digits (numbers only).';
     }
 
     setFieldErrors(nextErrors);
@@ -300,7 +300,7 @@ export default function ProfileSection() {
                       onChange={(event) => updateField('phone', event.target.value)}
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      maxLength={11}
+                      maxLength={10}
                       className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       placeholder="Enter contact number"
                     />

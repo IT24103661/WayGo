@@ -31,6 +31,10 @@ const toDayStart = (date) => {
   return d;
 };
 
+const isPastByDay = (date) => {
+  return toDayStart(date).getTime() < toDayStart(new Date()).getTime();
+};
+
 const calculateMaxConcurrentRooms = (reservations = []) => {
   if (!Array.isArray(reservations) || reservations.length === 0) return 0;
 
@@ -940,6 +944,10 @@ exports.allocateStayForBooking = async (req, res) => {
       const end = parseDate(checkOutDate);
       if (!start || !end || start >= end) {
         return res.status(400).json({ message: 'checkOutDate must be later than checkInDate.' });
+      }
+
+      if (isPastByDay(start) || isPastByDay(end)) {
+        return res.status(400).json({ message: 'checkInDate and checkOutDate must be today or future dates.' });
       }
 
       const inventory = await StayInventory.findOne({

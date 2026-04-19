@@ -4,6 +4,14 @@ const User = require('../models/User');
 
 const PAYROLL_ROLES = ['Driver', 'TourManager', 'FleetManager'];
 
+const isPastDate = (date) => {
+  const input = new Date(date);
+  const startOfInput = new Date(input.getFullYear(), input.getMonth(), input.getDate());
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return startOfInput < startOfToday;
+};
+
 exports.getSalaryCandidates = async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
@@ -28,16 +36,24 @@ exports.createSalaryApprovals = async (req, res) => {
     const results = [];
 
     for (const row of rows) {
-      const driverId = String(row.driverId || '').trim();
+      const employeeId = String(row.employeeId || row.driverId || '').trim();
       const month = String(row.month || '').trim();
+      const requestedRole = String(row.role || '').trim();
       const baseSalary = Number(row.baseSalary || 0);
+      const performanceValue = Number(row.performanceValue || 0);
+      const performanceRate = Number(row.performanceRate || 0);
+      const performancePayInput = Number(row.performancePay);
+      const performancePay = Number.isFinite(performancePayInput)
+        ? performancePayInput
+        : (performanceValue * performanceRate);
       const bonus = Number(row.bonus || 0);
       const deductions = Number(row.deductions || 0);
       const notes = String(row.notes || '').trim();
       const paymentStatus = String(row.paymentStatus || 'Pending');
+      const paymentDateRaw = row.paymentDate;
 
-      if (!driverId || !month) {
-        return res.status(400).json({ message: 'Each row requires driverId and month.' });
+      if (!employeeId || !month) {
+        return res.status(400).json({ message: 'Each row requires employeeId and month.' });
       }
 
       if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
@@ -48,45 +64,95 @@ exports.createSalaryApprovals = async (req, res) => {
         return res.status(400).json({ message: 'paymentStatus must be Pending or Paid.' });
       }
 
-      const driver = await User.findById(driverId).select('_id role managedByFleetManager');
-      if (!driver || driver.role !== 'Driver') {
-        return res.status(400).json({ message: 'driverId must reference a Driver user.' });
+      if ([
+        baseSalary,
+        performanceValue,
+        performanceRate,
+        performancePay,
+        bonus,
+        deductions
+      ].some((n) => Number.isNaN(n) || n < 0)) {
+        return res.status(400).json({
+          message: 'baseSalary, performanceValue, performanceRate, performancePay, bonus, and deductions must be non-negative numbers.'
+        });
       }
 
-      const netSalary = baseSalary + bonus - deductions;
+      let parsedPaymentDate = null;
+      if (paymentDateRaw) {
+        parsedPaymentDate = new Date(paymentDateRaw);
+        if (Number.isNaN(parsedPaymentDate.getTime())) {
+          return res.status(400).json({ message: 'paymentDate must be a valid date.' });
+        }
+        if (isPastDate(parsedPaymentDate)) {
+          return res.status(400).json({ message: 'paymentDate cannot be in the past.' });
+        }
+      }
+
+      const employee = await User.findById(employeeId).select('_id role managedByFleetManager');
+      if (!employee || !PAYROLL_ROLES.includes(employee.role)) {
+        return res.status(400).json({ message: 'employeeId must reference Driver, TourManager, or FleetManager.' });
+      }
+
+      if (requestedRole && requestedRole !== employee.role) {
+        return res.status(400).json({ message: 'role does not match the selected employee.' });
+      }
+
+      const netSalary = baseSalary + performancePay + bonus - deductions;
       if (netSalary < 0) {
         return res.status(400).json({ message: 'Net salary cannot be negative.' });
       }
 
-      const existing = await DriverSalary.findOne({ driver: driver._id, month });
-      const fleetManager = driver.managedByFleetManager || req.user.userId;
+      const existing = await DriverSalary.findOne({
+        month,
+        $or: [
+          { employee: employee._id },
+          { driver: employee._id }
+        ]
+      });
+      const fleetManager = employee.managedByFleetManager || req.user.userId;
+      const employeeRole = employee.role;
+      const driverRef = employee.role === 'Driver' ? employee._id : null;
 
       if (existing) {
         existing.fleetManager = fleetManager;
+        existing.employee = employee._id;
+        existing.employeeRole = employeeRole;
+        existing.driver = driverRef;
         existing.baseSalary = baseSalary;
+        existing.performanceValue = performanceValue;
+        existing.performanceRate = performanceRate;
+        existing.performancePay = performancePay;
         existing.bonus = bonus;
         existing.deductions = deductions;
         existing.netSalary = netSalary;
         existing.notes = notes;
         existing.paymentStatus = paymentStatus;
+        existing.paymentDate = parsedPaymentDate || existing.paymentDate;
         if (paymentStatus === 'Paid') {
-          existing.paymentDate = existing.paymentDate || new Date();
+          existing.paymentDate = existing.paymentDate || parsedPaymentDate || new Date();
           existing.paidAt = existing.paidAt || new Date();
+        } else if (paymentStatus === 'Pending') {
+          existing.paidAt = null;
         }
         await existing.save();
         results.push(existing);
       } else {
         const created = await DriverSalary.create({
           fleetManager,
-          driver: driver._id,
+          driver: driverRef,
+          employee: employee._id,
+          employeeRole,
           month,
           baseSalary,
+          performanceValue,
+          performanceRate,
+          performancePay,
           bonus,
           deductions,
           netSalary,
           paymentStatus,
-          paymentDate: paymentStatus === 'Paid' ? new Date() : null,
-          paidAt: paymentStatus === 'Paid' ? new Date() : null,
+          paymentDate: parsedPaymentDate || (paymentStatus === 'Paid' ? new Date() : null),
+          paidAt: paymentStatus === 'Paid' ? (parsedPaymentDate || new Date()) : null,
           notes
         });
         results.push(created);
@@ -107,23 +173,40 @@ exports.createSalaryApprovals = async (req, res) => {
 exports.updateSalaryApproval = async (req, res) => {
   try {
     const { salaryId } = req.params;
-    const { baseSalary, bonus, deductions, notes, paymentDate } = req.body;
+    const { baseSalary, performanceValue, performanceRate, performancePay, bonus, deductions, notes, paymentDate } = req.body;
 
     const salary = await DriverSalary.findById(salaryId);
     if (!salary) {
       return res.status(404).json({ message: 'Salary record not found.' });
     }
 
+    if (!salary.employee && salary.driver) {
+      salary.employee = salary.driver;
+      salary.employeeRole = 'Driver';
+    }
+
     if (baseSalary !== undefined) salary.baseSalary = Number(baseSalary);
+    if (performanceValue !== undefined) salary.performanceValue = Number(performanceValue);
+    if (performanceRate !== undefined) salary.performanceRate = Number(performanceRate);
+    if (performancePay !== undefined) salary.performancePay = Number(performancePay);
     if (bonus !== undefined) salary.bonus = Number(bonus);
     if (deductions !== undefined) salary.deductions = Number(deductions);
     if (notes !== undefined) salary.notes = String(notes || '').trim();
 
-    if ([salary.baseSalary, salary.bonus, salary.deductions].some((n) => Number.isNaN(Number(n)) || Number(n) < 0)) {
-      return res.status(400).json({ message: 'baseSalary, bonus, and deductions must be non-negative numbers.' });
+    if ([
+      salary.baseSalary,
+      salary.performanceValue,
+      salary.performanceRate,
+      salary.performancePay,
+      salary.bonus,
+      salary.deductions
+    ].some((n) => Number.isNaN(Number(n)) || Number(n) < 0)) {
+      return res.status(400).json({
+        message: 'baseSalary, performanceValue, performanceRate, performancePay, bonus, and deductions must be non-negative numbers.'
+      });
     }
 
-    salary.netSalary = Number(salary.baseSalary) + Number(salary.bonus) - Number(salary.deductions);
+    salary.netSalary = Number(salary.baseSalary) + Number(salary.performancePay) + Number(salary.bonus) - Number(salary.deductions);
     if (salary.netSalary < 0) {
       return res.status(400).json({ message: 'Net salary cannot be negative.' });
     }
@@ -136,6 +219,9 @@ exports.updateSalaryApproval = async (req, res) => {
         if (Number.isNaN(parsed.getTime())) {
           return res.status(400).json({ message: 'paymentDate must be a valid date.' });
         }
+        if (isPastDate(parsed)) {
+          return res.status(400).json({ message: 'paymentDate cannot be in the past.' });
+        }
         salary.paymentDate = parsed;
       }
     }
@@ -143,6 +229,7 @@ exports.updateSalaryApproval = async (req, res) => {
     await salary.save();
 
     const updated = await DriverSalary.findById(salaryId)
+      .populate('employee', 'name email phone role')
       .populate('driver', 'name email phone')
       .populate('fleetManager', 'name email');
 
@@ -166,6 +253,7 @@ exports.getSalaryApprovals = async (req, res) => {
     }
 
     const salaries = await DriverSalary.find(query)
+      .populate('employee', 'name email phone role')
       .populate('driver', 'name email phone')
       .populate('fleetManager', 'name email')
       .sort({ createdAt: -1 });
@@ -195,11 +283,21 @@ exports.updateSalaryApprovalStatus = async (req, res) => {
       if (Number.isNaN(parsedPaymentDate.getTime())) {
         return res.status(400).json({ message: 'paymentDate must be a valid date.' });
       }
+      if (isPastDate(parsedPaymentDate)) {
+        return res.status(400).json({ message: 'paymentDate cannot be in the past.' });
+      }
     }
 
-    const salary = await DriverSalary.findById(salaryId).populate('driver', 'name');
+    const salary = await DriverSalary.findById(salaryId)
+      .populate('employee', 'name role')
+      .populate('driver', 'name');
     if (!salary) {
       return res.status(404).json({ message: 'Salary record not found.' });
+    }
+
+    if (!salary.employee && salary.driver) {
+      salary.employee = salary.driver._id;
+      salary.employeeRole = 'Driver';
     }
 
     salary.paymentStatus = paymentStatus;
@@ -207,15 +305,17 @@ exports.updateSalaryApprovalStatus = async (req, res) => {
     salary.paidAt = paymentStatus === 'Paid' ? (parsedPaymentDate || new Date()) : null;
     await salary.save();
 
-    if (paymentStatus === 'Paid') {
+    if (paymentStatus === 'Paid' && salary.fleetManager) {
+      const employeeName = salary.employee?.name || salary.driver?.name || 'Employee';
       await FleetNotification.create({
         fleetManager: salary.fleetManager,
-        message: `Salary approved by admin: ${salary.driver?.name || 'Driver'} (${salary.month}) is marked as Paid.`,
+        message: `Salary approved by admin: ${employeeName} (${salary.month}) is marked as Paid.`,
         type: 'SALARY_PAID'
       });
     }
 
     const updated = await DriverSalary.findById(salaryId)
+      .populate('employee', 'name email phone role')
       .populate('driver', 'name email phone')
       .populate('fleetManager', 'name email');
 

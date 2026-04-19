@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 11) : value;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
     setForm((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -100,8 +100,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!/^\d{11}$/.test(form.phone.trim())) {
-      setError('Phone number must contain exactly 11 digits (numbers only).');
+    if (!/^\d{10}$/.test(form.phone.trim())) {
+      setError('Phone number must contain exactly 10 digits (numbers only).');
       return;
     }
 
@@ -315,7 +315,7 @@ export default function RegisterPage() {
                     placeholder="0712345678"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={11}
+                    maxLength={10}
                     className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm"
                   />
                 </div>

@@ -16,7 +16,6 @@ export default function FleetManagerDashboard() {
 
   const segment = window.location.pathname.split('/').filter(Boolean).pop();
   const PAGE_META = {
-    overview: { title: 'Fleet Overview', subtitle: 'Vehicle health and service status' },
     inventory: { title: 'Vehicle Inventory', subtitle: 'Track all fleet vehicles' },
     available: { title: 'Available Vehicles', subtitle: 'Vehicles ready for trip assignment' },
     fleetbookings: { title: 'Fleet Bookings', subtitle: 'Manage tourist fleet ride requests' },
@@ -26,12 +25,12 @@ export default function FleetManagerDashboard() {
     salaries: { title: 'Driver Salaries', subtitle: 'Manage and pay driver monthly salaries' },
     profile: { title: 'Profile', subtitle: 'Manage fleet manager details' },
   };
-  const meta = PAGE_META[segment] || PAGE_META.overview;
+  const meta = PAGE_META[segment] || PAGE_META.inventory;
 
   return (
-    <div className="relative flex h-screen bg-[#f0fbff] overflow-hidden" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
-      <div className="pointer-events-none absolute -top-28 -right-14 h-72 w-72 rounded-full bg-cyan-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -left-20 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
+    <div className="relative flex h-screen overflow-hidden bg-[#f0fbff]" style={{ fontFamily: '"Space Grotesk", "Sora", "Segoe UI", sans-serif' }}>
+      <div className="pointer-events-none absolute -top-28 -right-16 h-72 w-72 rounded-full bg-cyan-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
       <FleetManagerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -39,16 +38,12 @@ export default function FleetManagerDashboard() {
           title={meta.title}
           subtitle={meta.subtitle}
           onMenuClick={() => setSidebarOpen(true)}
+          segment={segment}
         />
-        <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-white/30 via-transparent to-transparent">
+        <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4 bg-gradient-to-b from-white/30 via-transparent to-transparent">
           <Routes>
-            <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr,1fr] gap-6">
-                <InventorySection showAddForm={false} />
-                <ServiceDueSection />
-              </div>
-            } />
+            <Route index element={<Navigate to="inventory" replace />} />
+            <Route path="overview" element={<Navigate to="/dashboard/fleetmanager/inventory" replace />} />
             <Route path="inventory" element={<InventorySection />} />
             <Route path="available" element={<AvailableVehiclesSection />} />
             <Route path="fleetbookings" element={<FleetBookingsSection />} />

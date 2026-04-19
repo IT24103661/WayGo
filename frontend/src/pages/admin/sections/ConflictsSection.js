@@ -5,21 +5,21 @@ import { adminAPI } from '../../../services/adminAPI';
 /* ─────────────────────────────────────────
    BAN USER MODAL
 ───────────────────────────────────────── */
-function BanModal({ onConfirm, onClose, saving, existingBans = [] }) {
-  const [form, setForm] = useState({ name: '', role: 'Tourist', reason: '' });
-  const [errors, setErrors] = useState({ name: '', reason: '' });
+function BanModal({ onConfirm, onClose, saving, existingBans = [], users = [] }) {
+  const [form, setForm] = useState({ userId: '', reason: '' });
+  const [errors, setErrors] = useState({ userId: '', reason: '' });
+
+  const selectedUser = useMemo(
+    () => users.find((item) => String(item._id) === String(form.userId)) || null,
+    [users, form.userId]
+  );
 
   const validate = () => {
-    const nextErrors = { name: '', reason: '' };
-    const trimmedName = form.name.trim();
+    const nextErrors = { userId: '', reason: '' };
     const trimmedReason = form.reason.trim();
 
-    if (!trimmedName) {
-      nextErrors.name = 'Name is required.';
-    } else if (trimmedName.length < 3) {
-      nextErrors.name = 'Name must be at least 3 characters.';
-    } else if (trimmedName.length > 60) {
-      nextErrors.name = 'Name must be 60 characters or fewer.';
+    if (!form.userId) {
+      nextErrors.userId = 'Please select a user to ban.';
     }
 
     if (!trimmedReason) {
@@ -32,16 +32,15 @@ function BanModal({ onConfirm, onClose, saving, existingBans = [] }) {
 
     const hasActiveDuplicate = existingBans.some((item) => (
       item.active
-      && String(item.name || '').trim().toLowerCase() === trimmedName.toLowerCase()
-      && String(item.role || '').trim() === form.role
+      && String(item.user?._id || item.user || '') === String(form.userId)
     ));
 
     if (hasActiveDuplicate) {
-      nextErrors.name = 'An active ban already exists for this name and role.';
+      nextErrors.userId = 'An active ban already exists for this user.';
     }
 
     setErrors(nextErrors);
-    return !nextErrors.name && !nextErrors.reason;
+    return !nextErrors.userId && !nextErrors.reason;
   };
 
   const change = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -54,27 +53,27 @@ function BanModal({ onConfirm, onClose, saving, existingBans = [] }) {
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700 p-1 rounded-lg hover:bg-gray-100"><MdClose className="text-xl" /></button>
         </div>
         <div className="px-6 py-5 space-y-4">
-          {[
-            { label: 'Name',   name: 'name',   type: 'text',   placeholder: 'Full name of user' },
-            { label: 'Reason', name: 'reason', type: 'text',   placeholder: 'Brief reason for ban' },
-          ].map(({ label, name, type, placeholder }) => (
-            <div key={name}>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
-              <input name={name} type={type} value={form[name]} onChange={change} placeholder={placeholder}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-              {name === 'name' && errors.name && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.name}</p>}
-              {name === 'reason' && errors.reason && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.reason}</p>}
-            </div>
-          ))}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Role</label>
-            <select name="role" value={form.role} onChange={change}
+            <label className="block text-xs font-semibold text-slate-600 mb-1">User</label>
+            <select name="userId" value={form.userId} onChange={change}
               className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
-              <option>Tourist</option>
-              <option>Driver</option>
-              <option>TourManager</option>
-              <option>FleetManager</option>
+              <option value="">Select user...</option>
+              {users.map((user) => (
+                <option key={user._id} value={user._id}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
             </select>
+            {errors.userId && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.userId}</p>}
+            {selectedUser && (
+              <p className="mt-1 text-xs text-slate-600">{selectedUser.email || '-'} {selectedUser.phone ? `| ${selectedUser.phone}` : ''}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Reason</label>
+            <input name="reason" type="text" value={form.reason} onChange={change} placeholder="Brief reason for ban"
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+            {errors.reason && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.reason}</p>}
           </div>
         </div>
         <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
@@ -82,9 +81,11 @@ function BanModal({ onConfirm, onClose, saving, existingBans = [] }) {
           <button
             onClick={() => {
                 if (!validate()) return;
+              if (!selectedUser) return;
               onConfirm({
-                name: form.name.trim(),
-                role: form.role,
+                userId: selectedUser._id,
+                name: selectedUser.name,
+                role: selectedUser.role,
                 reason: form.reason.trim()
               });
             }}
@@ -113,6 +114,8 @@ export default function ConflictsSection() {
   const [refundStatusFilter, setRefundStatusFilter] = useState('All');
   const [showBanModal, setShowBanModal] = useState(false);
   const [banSearch, setBanSearch] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -150,6 +153,18 @@ export default function ConflictsSection() {
     }
   }, []);
 
+  const fetchConflictUsers = useCallback(async () => {
+    try {
+      setLoadingUsers(true);
+      const res = await adminAPI.getConflictUsers({});
+      setUsers(res.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load users.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRefunds();
   }, [fetchRefunds]);
@@ -157,6 +172,10 @@ export default function ConflictsSection() {
   useEffect(() => {
     fetchBans();
   }, [fetchBans]);
+
+  useEffect(() => {
+    fetchConflictUsers();
+  }, [fetchConflictUsers]);
 
   const processRefund = async (id, nextStatus) => {
     try {
@@ -236,7 +255,7 @@ export default function ConflictsSection() {
         <p className="mt-1 text-sm text-rose-100/95">Handle refunds, enforce bans, and document sensitive administrative actions.</p>
       </div>
 
-      {showBanModal && <BanModal onConfirm={addBan} onClose={() => setShowBanModal(false)} saving={savingBan} existingBans={bans} />}
+      {showBanModal && <BanModal onConfirm={addBan} onClose={() => setShowBanModal(false)} saving={savingBan} existingBans={bans} users={users} />}
 
       {/* ── Alert banner ── */}
       <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
@@ -351,8 +370,9 @@ export default function ConflictsSection() {
               />
             </div>
             <button
+              disabled={loadingUsers || users.length === 0}
               onClick={() => setShowBanModal(true)}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-xl font-medium transition-colors"
+              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-xl font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <MdBlock className="text-base" /> Ban User
             </button>

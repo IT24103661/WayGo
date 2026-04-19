@@ -6,7 +6,8 @@ import {
   MdTune,
   MdPayments,
   MdGavel,
-  MdPerson
+  MdPerson,
+  MdWarning
 } from 'react-icons/md';
 
 const TAB_STYLES = {
@@ -34,6 +35,11 @@ const TAB_STYLES = {
     icon: MdPayments,
     chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     dot: 'bg-emerald-500'
+  },
+  alerts: {
+    icon: MdWarning,
+    chip: 'bg-rose-50 text-rose-700 border-rose-200',
+    dot: 'bg-rose-500'
   },
   conflicts: {
     icon: MdGavel,

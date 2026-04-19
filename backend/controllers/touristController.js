@@ -6,9 +6,13 @@ const Tour = require('../models/Tour');
 const Review = require('../models/Review');
 const FleetNotification = require('../models/FleetNotification');
 const TouristNotification = require('../models/TouristNotification');
+const EmergencyAlert = require('../models/EmergencyAlert');
+const AdminAuditLog = require('../models/AdminAuditLog');
+const Sentiment = require('sentiment');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\d{11}$/;
+const PHONE_REGEX = /^\d{10}$/;
+const sentimentAnalyzer = new Sentiment();
 
 const cleanText = (value) => String(value || '').trim();
 
@@ -24,6 +28,16 @@ const validatePickupTime = (value, fieldName = 'pickupTime') => {
 };
 
 const normalizeLocation = (value) => cleanText(value).toLowerCase();
+
+const toDayStart = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const isPastByDay = (date) => {
+  return toDayStart(date).getTime() < toDayStart(new Date()).getTime();
+};
 
 const releaseBookingResources = async (booking) => {
   if (!booking) return;
@@ -107,6 +121,39 @@ const sanitizePackageOptions = (packageOptions = {}) => {
   };
 };
 
+const deriveSentimentLabel = (score) => {
+  if (score > 0) return 'Positive';
+  if (score < 0) return 'Negative';
+  return 'Neutral';
+};
+
+const getSentimentPayload = (text) => {
+  const result = sentimentAnalyzer.analyze(String(text || ''));
+  const score = Number.isFinite(result?.score) ? result.score : 0;
+  return {
+    sentimentScore: score,
+    sentimentLabel: deriveSentimentLabel(score)
+  };
+};
+
+const updateDriverFlagStatus = async (driverId) => {
+  if (!driverId) return;
+
+  const driver = await User.findOne({ _id: driverId, role: 'Driver' }).select('_id isFlagged');
+  if (!driver) return;
+
+  const latestThree = await Review.find({ driver: driver._id })
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .select('sentimentLabel');
+
+  const shouldFlag = latestThree.length >= 3 && latestThree.every((item) => item.sentimentLabel === 'Negative');
+  if (driver.isFlagged !== shouldFlag) {
+    driver.isFlagged = shouldFlag;
+    await driver.save();
+  }
+};
+
 // ==========================================
 // 1. TOURIST PROFILE MANAGEMENT (CRUD)
 // ==========================================
@@ -158,7 +205,7 @@ exports.updateProfile = async (req, res) => {
     if (phone !== undefined) {
       const nextPhone = cleanText(phone);
       if (!PHONE_REGEX.test(nextPhone)) {
-        return res.status(400).json({ message: 'Phone number must contain exactly 11 digits (numbers only).' });
+        return res.status(400).json({ message: 'Phone number must contain exactly 10 digits (numbers only).' });
       }
       tourist.phone = nextPhone;
     }
@@ -245,9 +292,6 @@ exports.createBooking = async (req, res) => {
     if (dropoff && dropoff.length > 180) {
       return res.status(400).json({ message: 'dropoffLocation must be 180 characters or fewer.' });
     }
-    if (dropoff && normalizeLocation(pickup) === normalizeLocation(dropoff)) {
-      return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
-    }
 
     const pickupValidation = date ? validatePickupTime(date, 'date') : { ok: true, value: new Date(Date.now() + 10 * 60 * 1000) };
     if (!pickupValidation.ok) {
@@ -280,6 +324,12 @@ exports.createBooking = async (req, res) => {
     if (sanitizedOptions.checkInDate && sanitizedOptions.checkOutDate && sanitizedOptions.checkOutDate <= sanitizedOptions.checkInDate) {
       return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
     }
+    if (sanitizedOptions.checkInDate && isPastByDay(sanitizedOptions.checkInDate)) {
+      return res.status(400).json({ message: 'packageOptions.checkInDate cannot be in the past.' });
+    }
+    if (sanitizedOptions.checkOutDate && isPastByDay(sanitizedOptions.checkOutDate)) {
+      return res.status(400).json({ message: 'packageOptions.checkOutDate cannot be in the past.' });
+    }
 
     const finalPrice = sanitizedOptions.pricing.finalTotal > 0
       ? sanitizedOptions.pricing.finalTotal
@@ -293,7 +343,7 @@ exports.createBooking = async (req, res) => {
       bookingType: 'Tour',
       tourPackage: tour ? tour._id : null,
       pickupLocation: pickup,
-      dropoffLocation: dropoff || null,
+      dropoffLocation: null,
       pickupTime,
       totalPrice: finalPrice,
       packageOptions: sanitizedOptions,
@@ -542,7 +592,7 @@ exports.markTouristNotificationRead = async (req, res) => {
     const notification = await TouristNotification.findOneAndUpdate(
       { _id: req.params.id, tourist: req.user.userId },
       { isRead: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!notification) {
@@ -610,6 +660,8 @@ exports.getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ tourist: req.user.userId })
       .populate('tourPackage')
+      .populate('assignedDriver', 'name email phone')
+      .populate('assignedVehicle', 'plateNumber make model')
       .sort({ createdAt: -1 });
     res.json(bookings);
   } catch (error) {
@@ -672,7 +724,11 @@ exports.updateBooking = async (req, res) => {
       booking.dropoffLocation = dropoff || null;
     }
 
-    if (booking.dropoffLocation && normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)) {
+    if (
+      booking.bookingType === 'Taxi' &&
+      booking.dropoffLocation &&
+      normalizeLocation(booking.pickupLocation) === normalizeLocation(booking.dropoffLocation)
+    ) {
       return res.status(400).json({ message: 'pickupLocation and dropoffLocation cannot be the same.' });
     }
 
@@ -712,6 +768,12 @@ exports.updateBooking = async (req, res) => {
       }
       if (nextOptions.checkInDate && nextOptions.checkOutDate && nextOptions.checkOutDate <= nextOptions.checkInDate) {
         return res.status(400).json({ message: 'packageOptions.checkOutDate must be after checkInDate.' });
+      }
+      if (nextOptions.checkInDate && isPastByDay(nextOptions.checkInDate)) {
+        return res.status(400).json({ message: 'packageOptions.checkInDate cannot be in the past.' });
+      }
+      if (nextOptions.checkOutDate && isPastByDay(nextOptions.checkOutDate)) {
+        return res.status(400).json({ message: 'packageOptions.checkOutDate cannot be in the past.' });
       }
       booking.packageOptions = nextOptions;
     }
@@ -759,14 +821,15 @@ exports.getReviews = async (req, res) => {
 
 exports.createReview = async (req, res) => {
   try {
-    const { tourName, rating, text } = req.body;
+    const { tourName, rating, score, text, driverId = null } = req.body;
 
     const safeTourName = cleanText(tourName || 'General Tour');
     const safeText = cleanText(text);
-    const safeRating = Number(rating);
+    const incomingScore = rating !== undefined ? rating : score;
+    const safeRating = Number(incomingScore);
 
     if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
-      return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+      return res.status(400).json({ message: 'rating/score must be an integer between 1 and 5.' });
     }
     if (!safeText || safeText.length < 10 || safeText.length > 1000) {
       return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
@@ -775,12 +838,32 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ message: 'tourName should be 120 characters or fewer.' });
     }
 
+    let driver = null;
+    if (driverId) {
+      if (!/^[a-f\d]{24}$/i.test(String(driverId))) {
+        return res.status(400).json({ message: 'driverId must be a valid ID when provided.' });
+      }
+      driver = await User.findOne({ _id: driverId, role: 'Driver' }).select('_id');
+      if (!driver) {
+        return res.status(404).json({ message: 'Driver not found for provided driverId.' });
+      }
+    }
+
+    const sentimentPayload = getSentimentPayload(safeText);
+
     const review = await Review.create({
       tourist: req.user.userId,
+      driver: driver ? driver._id : null,
       tourName: safeTourName,
       rating: safeRating,
-      text: safeText
+      text: safeText,
+      sentimentScore: sentimentPayload.sentimentScore,
+      sentimentLabel: sentimentPayload.sentimentLabel
     });
+
+    if (driver) {
+      await updateDriverFlagStatus(driver._id);
+    }
     res.status(201).json(review);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -795,10 +878,11 @@ exports.updateReview = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     
-    if (req.body.rating !== undefined) {
-      const safeRating = Number(req.body.rating);
+    if (req.body.rating !== undefined || req.body.score !== undefined) {
+      const incomingScore = req.body.rating !== undefined ? req.body.rating : req.body.score;
+      const safeRating = Number(incomingScore);
       if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
-        return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+        return res.status(400).json({ message: 'rating/score must be an integer between 1 and 5.' });
       }
       review.rating = safeRating;
     }
@@ -808,6 +892,9 @@ exports.updateReview = async (req, res) => {
         return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
       }
       review.text = safeText;
+      const sentimentPayload = getSentimentPayload(safeText);
+      review.sentimentScore = sentimentPayload.sentimentScore;
+      review.sentimentLabel = sentimentPayload.sentimentLabel;
     }
     if (req.body.tourName !== undefined) {
       const safeTourName = cleanText(req.body.tourName || 'General Tour');
@@ -818,6 +905,9 @@ exports.updateReview = async (req, res) => {
     }
     
     await review.save();
+    if (review.driver) {
+      await updateDriverFlagStatus(review.driver);
+    }
     res.json(review);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -832,9 +922,96 @@ exports.deleteReview = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     
+    const driverId = review.driver;
     await review.deleteOne();
+    if (driverId) {
+      await updateDriverFlagStatus(driverId);
+    }
     res.json({ message: 'Review deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// ==========================================
+// EMERGENCY SOS
+// ==========================================
+
+// @desc    Trigger emergency SOS alert
+// @route   POST /api/tourist/sos
+// @access  Private (Tourist only)
+exports.sendSOSAlert = async (req, res) => {
+  try {
+    const { latitude, longitude, accuracy, emergencyType = 'Safety', note = '' } = req.body || {};
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const acc = accuracy === undefined || accuracy === null ? null : Number(accuracy);
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return res.status(400).json({ message: 'latitude must be a valid number between -90 and 90.' });
+    }
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+      return res.status(400).json({ message: 'longitude must be a valid number between -180 and 180.' });
+    }
+    if (acc !== null && (!Number.isFinite(acc) || acc < 0 || acc > 100000)) {
+      return res.status(400).json({ message: 'accuracy must be between 0 and 100000 meters when provided.' });
+    }
+
+    const safeType = ['Medical', 'Safety', 'Accident', 'Other'].includes(String(emergencyType))
+      ? String(emergencyType)
+      : 'Safety';
+    const safeNote = cleanText(note).slice(0, 500);
+
+    const oneMinuteAgo = new Date(Date.now() - (60 * 1000));
+    const hasRecentActiveAlert = await EmergencyAlert.exists({
+      tourist: req.user.userId,
+      status: 'Active',
+      createdAt: { $gte: oneMinuteAgo }
+    });
+
+    if (hasRecentActiveAlert) {
+      return res.status(429).json({ message: 'An SOS alert was sent recently. Please wait a moment before sending another.' });
+    }
+
+    const alert = await EmergencyAlert.create({
+      tourist: req.user.userId,
+      latitude: lat,
+      longitude: lng,
+      accuracy: acc,
+      emergencyType: safeType,
+      note: safeNote,
+      status: 'Active'
+    });
+
+    await AdminAuditLog.create({
+      actor: req.user.userId,
+      action: 'EMERGENCY_SOS_CREATED',
+      targetType: 'EmergencyAlert',
+      targetId: String(alert._id),
+      after: {
+        latitude: alert.latitude,
+        longitude: alert.longitude,
+        accuracy: alert.accuracy,
+        emergencyType: alert.emergencyType,
+        status: alert.status
+      },
+      meta: {
+        source: 'tourist-sos'
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'SOS alert sent to WayGo Admin. Contact local emergency services immediately if needed.',
+      data: {
+        id: alert._id,
+        status: alert.status,
+        createdAt: alert.createdAt,
+        emergencyHotline: '119'
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error sending SOS alert.' });
   }
 };

@@ -31,7 +31,7 @@ export default function ProfileSection() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 11) : value;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
     setProfile({ ...profile, [name]: nextValue });
     setFieldErrors((prev) => ({ ...prev, [name]: '' }));
   };
@@ -50,8 +50,8 @@ export default function ProfileSection() {
       nextErrors.email = 'Enter a valid email address.';
     }
 
-    if (!/^\d{11}$/.test(phone)) {
-      nextErrors.phone = 'Phone number must contain exactly 11 digits.';
+    if (!/^\d{10}$/.test(phone)) {
+      nextErrors.phone = 'Phone number must contain exactly 10 digits.';
     }
 
     setFieldErrors(nextErrors);
@@ -147,8 +147,8 @@ export default function ProfileSection() {
                 className="bg-transparent border-none outline-none w-full text-zinc-900 font-medium"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                maxLength={11}
-               />
+                maxLength={10}
+              />
             </div>
             {fieldErrors.phone && <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>}
           </div>

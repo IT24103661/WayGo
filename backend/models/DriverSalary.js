@@ -10,7 +10,21 @@ const driverSalarySchema = new mongoose.Schema({
   driver: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: false,
+    default: null,
+    index: true
+  },
+  employee: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    default: null,
+    index: true
+  },
+  employeeRole: {
+    type: String,
+    enum: ['Driver', 'TourManager', 'FleetManager'],
+    default: 'Driver',
     index: true
   },
   month: {
@@ -21,6 +35,21 @@ const driverSalarySchema = new mongoose.Schema({
   baseSalary: {
     type: Number,
     required: true,
+    min: 0
+  },
+  performanceValue: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  performanceRate: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  performancePay: {
+    type: Number,
+    default: 0,
     min: 0
   },
   bonus: {
@@ -58,6 +87,7 @@ const driverSalarySchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+driverSalarySchema.index({ fleetManager: 1, employee: 1, employeeRole: 1, month: 1 });
 driverSalarySchema.index({ fleetManager: 1, driver: 1, month: 1 });
 
 module.exports = mongoose.model('DriverSalary', driverSalarySchema);

@@ -2,18 +2,61 @@ import { MdTour, MdMap, MdTrendingUp, MdAutoGraph } from 'react-icons/md';
 import { useMemo } from 'react';
 import { useTourManagerBookings, useTourManagerStats } from '../../../hooks/useTourManagerAPI';
 
+const VALID_BOOKING_STATUSES = ['Pending', 'Accepted', 'En Route', 'Completed', 'Cancelled'];
+
+const toSafeNumber = (value, fallback = 0) => {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+};
+
+const toClampedNumber = (value, min, max, fallback = min) => {
+  const next = toSafeNumber(value, fallback);
+  return Math.min(max, Math.max(min, next));
+};
+
+const normalizeBookingStatus = (status) => {
+  const text = String(status || '').trim().toLowerCase();
+  if (!text) return 'Pending';
+
+  if (text === 'en route' || text === 'enroute' || text === 'in progress') return 'En Route';
+  if (text === 'accepted') return 'Accepted';
+  if (text === 'completed') return 'Completed';
+  if (text === 'cancelled' || text === 'canceled') return 'Cancelled';
+  if (text === 'pending') return 'Pending';
+
+  return VALID_BOOKING_STATUSES.includes(status) ? status : 'Pending';
+};
+
 export default function OverviewSection() {
   const { stats } = useTourManagerStats();
   const { bookings } = useTourManagerBookings();
 
-  const metrics = useMemo(() => {
+  const validatedStats = useMemo(() => {
+    return {
+      avgRating: toClampedNumber(stats?.avgRating, 0, 5, 0),
+      totalReviews: Math.max(0, Math.round(toSafeNumber(stats?.totalReviews, 0))),
+      activeTours: Math.max(0, Math.round(toSafeNumber(stats?.activeTours, 0))),
+      totalBookings: Math.max(0, Math.round(toSafeNumber(stats?.totalBookings, 0)))
+    };
+  }, [stats]);
+
+  const validatedBookings = useMemo(() => {
     const allBookings = Array.isArray(bookings) ? bookings : [];
+    return allBookings.map((booking) => ({
+      ...booking,
+      status: normalizeBookingStatus(booking?.status),
+      totalPrice: Math.max(0, toSafeNumber(booking?.totalPrice, 0))
+    }));
+  }, [bookings]);
+
+  const metrics = useMemo(() => {
+    const allBookings = validatedBookings;
 
     const completedBookings = allBookings.filter((booking) => booking.status === 'Completed');
     const cancelledBookings = allBookings.filter((booking) => booking.status === 'Cancelled');
 
-    const completedRevenue = completedBookings.reduce((sum, booking) => sum + (Number(booking.totalPrice) || 0), 0);
-    const avgRating = Number(stats?.avgRating || 0);
+    const completedRevenue = completedBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+    const avgRating = validatedStats.avgRating;
 
     const onTrackRate = allBookings.length > 0
       ? Math.max(0, Math.round(((allBookings.length - cancelledBookings.length) / allBookings.length) * 100))
@@ -32,7 +75,7 @@ export default function OverviewSection() {
         scheduled: allBookings.filter((booking) => ['Accepted', 'En Route', 'Completed'].includes(booking.status)).length
       }
     };
-  }, [bookings, stats?.avgRating]);
+  }, [validatedBookings, validatedStats.avgRating]);
 
   const cards = [
     {
@@ -52,7 +95,7 @@ export default function OverviewSection() {
     {
       label: 'Avg Tour Rating',
       value: `${metrics.avgRating || 0} / 5`,
-      helper: `${stats?.totalReviews ?? 0} review signals`,
+      helper: `${validatedStats.totalReviews} review signals`,
       icon: MdTour,
       accent: 'from-cyan-500 to-sky-400'
     },
@@ -131,7 +174,7 @@ export default function OverviewSection() {
             <p className="text-sm text-cyan-700/80 mt-1">Track progression from pending requests to active operations.</p>
           </div>
           <span className="text-xs px-3 py-1 rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 font-semibold">
-            Total Bookings: {Array.isArray(bookings) ? bookings.length : 0}
+            Total Bookings: {metrics.totalBookings}
           </span>
         </div>
 
@@ -158,17 +201,17 @@ export default function OverviewSection() {
           <p className="text-sm text-cyan-700/80 mt-2">Your premium operations quality this cycle.</p>
           <div className="mt-4 flex items-center justify-between text-sm text-cyan-800">
             <span>Active Tours</span>
-            <span className="font-semibold">{stats?.activeTours ?? 0}</span>
+            <span className="font-semibold">{validatedStats.activeTours}</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-sm text-cyan-800">
             <span>Total Bookings</span>
-            <span className="font-semibold">{stats?.totalBookings ?? 0}</span>
+            <span className="font-semibold">{validatedStats.totalBookings}</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-sm text-cyan-800">
             <span>Completion Rate</span>
             <span className="font-semibold">
-              {Array.isArray(bookings) && bookings.length > 0
-                ? `${Math.round((metrics.completedBookings / bookings.length) * 100)}%`
+              {metrics.totalBookings > 0
+                ? `${Math.round((metrics.completedBookings / metrics.totalBookings) * 100)}%`
                 : '0%'}
             </span>
           </div>

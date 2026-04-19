@@ -1,4 +1,6 @@
-import { MdAttachMoney, MdLocalTaxi, MdTour, MdPeople } from 'react-icons/md';
+import { useEffect, useState } from 'react';
+import { MdAttachMoney, MdLocalTaxi, MdTour, MdPeople, MdSos, MdLocationOn, MdCheckCircle } from 'react-icons/md';
+import { adminAPI } from '../../../services/adminAPI';
 
 /* ─── KPI DATA ─────────────────────────────────────────── */
 const KPI = [
@@ -128,6 +130,42 @@ const STATUS_STYLE = {
 
 /* ─── MAIN ───────────────────────────────────────────────── */
 export default function OverviewSection() {
+  const [sosAlerts, setSosAlerts] = useState([]);
+  const [sosLoading, setSosLoading] = useState(false);
+  const [sosError, setSosError] = useState('');
+  const [resolvingId, setResolvingId] = useState('');
+
+  const fetchSOSAlerts = async () => {
+    try {
+      setSosLoading(true);
+      const response = await adminAPI.getEmergencyAlerts({ status: 'Active', page: 1, limit: 6 });
+      setSosAlerts(Array.isArray(response?.data) ? response.data : []);
+      setSosError('');
+    } catch (error) {
+      setSosError(error.message || 'Failed to load SOS alerts.');
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSOSAlerts();
+    const interval = window.setInterval(fetchSOSAlerts, 15000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const handleResolveSOS = async (alertId) => {
+    try {
+      setResolvingId(alertId);
+      await adminAPI.resolveEmergencyAlert(alertId);
+      setSosAlerts((prev) => prev.filter((item) => item._id !== alertId));
+    } catch (error) {
+      setSosError(error.message || 'Failed to resolve SOS alert.');
+    } finally {
+      setResolvingId('');
+    }
+  };
+
   return (
     <div className="space-y-6 wg-admin-motion wg-motion-overview">
       <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 px-6 py-5 text-white shadow-[0_26px_55px_-35px_rgba(37,99,235,0.75)]">
@@ -151,6 +189,95 @@ export default function OverviewSection() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-[0_20px_45px_-30px_rgba(30,64,175,0.22)] border border-white/70 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <MdSos className="text-red-600 text-lg" />
+              Live SOS Alerts
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Active emergency requests from tourists</p>
+          </div>
+          <button
+            onClick={fetchSOSAlerts}
+            className="text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {sosError && (
+          <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {sosError}
+          </div>
+        )}
+
+        <div className="p-4 sm:p-6">
+          {sosLoading ? (
+            <p className="text-sm text-slate-500">Loading SOS alerts...</p>
+          ) : sosAlerts.length === 0 ? (
+            <p className="text-sm text-slate-500">No active SOS alerts at the moment.</p>
+          ) : (
+            <div className="space-y-3">
+              {sosAlerts.map((alert) => {
+                const lat = Number(alert.latitude);
+                const lng = Number(alert.longitude);
+                const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+                const mapLink = hasCoords ? `https://maps.google.com/?q=${lat},${lng}` : '#';
+
+                return (
+                  <div key={alert._id} className="rounded-2xl border border-red-200 bg-red-50/60 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-slate-900">
+                        {alert.tourist?.name || 'Tourist'}
+                        <span className="ml-2 text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-full px-2 py-0.5">
+                          {alert.emergencyType || 'Safety'}
+                        </span>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {alert.createdAt ? new Date(alert.createdAt).toLocaleString() : ''}
+                      </p>
+                    </div>
+
+                    <div className="mt-2 text-xs text-slate-700 space-y-1">
+                      <p>Email: {alert.tourist?.email || '-'}</p>
+                      <p>Phone: {alert.tourist?.phone || '-'}</p>
+                      <p>
+                        <span className="inline-flex items-center gap-1">
+                          <MdLocationOn className="text-red-600" />
+                          {hasCoords ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'Location unavailable'}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <a
+                        href={mapLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`text-xs px-3 py-1.5 rounded-full font-semibold border ${hasCoords ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100' : 'border-slate-200 bg-slate-100 text-slate-400 pointer-events-none'}`}
+                      >
+                        Open in Maps
+                      </a>
+                      <button
+                        onClick={() => handleResolveSOS(alert._id)}
+                        disabled={resolvingId === alert._id}
+                        className="text-xs px-3 py-1.5 rounded-full font-semibold border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <MdCheckCircle className="text-sm" />
+                          {resolvingId === alert._id ? 'Resolving...' : 'Mark Resolved'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* CHARTS ROW */}
