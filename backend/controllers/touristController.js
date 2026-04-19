@@ -660,6 +660,8 @@ exports.getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ tourist: req.user.userId })
       .populate('tourPackage')
+      .populate('assignedDriver', 'name email phone')
+      .populate('assignedVehicle', 'plateNumber make model')
       .sort({ createdAt: -1 });
     res.json(bookings);
   } catch (error) {
@@ -819,14 +821,15 @@ exports.getReviews = async (req, res) => {
 
 exports.createReview = async (req, res) => {
   try {
-    const { tourName, rating, text, driverId = null } = req.body;
+    const { tourName, rating, score, text, driverId = null } = req.body;
 
     const safeTourName = cleanText(tourName || 'General Tour');
     const safeText = cleanText(text);
-    const safeRating = Number(rating);
+    const incomingScore = rating !== undefined ? rating : score;
+    const safeRating = Number(incomingScore);
 
     if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
-      return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+      return res.status(400).json({ message: 'rating/score must be an integer between 1 and 5.' });
     }
     if (!safeText || safeText.length < 10 || safeText.length > 1000) {
       return res.status(400).json({ message: 'text must be between 10 and 1000 characters.' });
@@ -875,10 +878,11 @@ exports.updateReview = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
     
-    if (req.body.rating !== undefined) {
-      const safeRating = Number(req.body.rating);
+    if (req.body.rating !== undefined || req.body.score !== undefined) {
+      const incomingScore = req.body.rating !== undefined ? req.body.rating : req.body.score;
+      const safeRating = Number(incomingScore);
       if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
-        return res.status(400).json({ message: 'rating must be an integer between 1 and 5.' });
+        return res.status(400).json({ message: 'rating/score must be an integer between 1 and 5.' });
       }
       review.rating = safeRating;
     }
