@@ -56,6 +56,18 @@ const estimatePrice = (pickupLocation, dropoffLocation) => {
   return String(Math.round(fare / 50) * 50);
 };
 
+const getMinPickupDateTimeLocal = () => {
+  const minTime = new Date(Date.now() + 5 * 60 * 1000);
+  const local = new Date(minTime.getTime() - minTime.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const parseDateTimeInput = (value) => {
+  if (!value) return NaN;
+  const parsed = new Date(value);
+  return parsed.getTime();
+};
+
 const validateFleetPayload = (payload) => {
   if (!payload.pickupLocation || payload.pickupLocation.length < 3 || payload.pickupLocation.length > 180) {
     return 'Pickup location must be between 3 and 180 characters.';
@@ -67,7 +79,7 @@ const validateFleetPayload = (payload) => {
     return 'Pickup and dropoff locations cannot be the same.';
   }
 
-  const pickupAt = new Date(payload.pickupTime).getTime();
+  const pickupAt = parseDateTimeInput(payload.pickupTime);
   if (!pickupAt || Number.isNaN(pickupAt)) {
     return 'Pickup time must be a valid date and time.';
   }
@@ -99,6 +111,7 @@ export default function FleetBookingsSection() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const minPickupDateTime = getMinPickupDateTimeLocal();
 
   useEffect(() => {
     const nextPrice = estimatePrice(form.pickupLocation, form.dropoffLocation);
@@ -238,6 +251,7 @@ export default function FleetBookingsSection() {
             type="datetime-local"
             value={form.pickupTime}
             onChange={(e) => setForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+            min={minPickupDateTime}
             className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
             required
           />
@@ -358,6 +372,7 @@ export default function FleetBookingsSection() {
                   type="datetime-local"
                   value={editForm.pickupTime}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+                  min={minPickupDateTime}
                   className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
                   required
                 />
