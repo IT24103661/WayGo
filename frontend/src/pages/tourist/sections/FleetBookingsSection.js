@@ -9,6 +9,12 @@ const INITIAL_FORM = {
   totalPrice: ''
 };
 
+const getMinDateTime = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 16);
+};
+
 const CITY_COORDS = {
   colombo: [6.9271, 79.8612],
   negombo: [7.2083, 79.8358],
@@ -36,9 +42,7 @@ const estimatePrice = (pickupLocation, dropoffLocation) => {
 
   if (!pickup || !dropoff) return '';
 
-  if (pickup === dropoff) {
-    return '800';
-  }
+  if (pickup === dropoff) return '800';
 
   const pickupCity = findKnownCity(pickup);
   const dropoffCity = findKnownCity(dropoff);
@@ -47,12 +51,11 @@ const estimatePrice = (pickupLocation, dropoffLocation) => {
     const [lat1, lon1] = CITY_COORDS[pickupCity];
     const [lat2, lon2] = CITY_COORDS[dropoffCity];
     const approxKm = Math.sqrt((lat1 - lat2) ** 2 + (lon1 - lon2) ** 2) * 111;
-    const fare = Math.max(800, 350 + (approxKm * 120));
+    const fare = Math.max(800, 350 + approxKm * 120);
     return String(Math.round(fare / 50) * 50);
   }
 
-  // Fallback estimate when locations do not match known city names.
-  const fare = 1400 + (Math.max(pickup.length, dropoff.length) * 25);
+  const fare = 1400 + Math.max(pickup.length, dropoff.length) * 25;
   return String(Math.round(fare / 50) * 50);
 };
 
@@ -88,6 +91,25 @@ export default function FleetBookingsSection() {
     }
   }, [editForm.pickupLocation, editForm.dropoffLocation, editForm.totalPrice]);
 
+  const validateFutureDate = (pickupTime) => {
+    if (!pickupTime) {
+      return 'Please select pickup date and time.';
+    }
+
+    const selectedDate = new Date(pickupTime);
+    const now = new Date();
+
+    if (Number.isNaN(selectedDate.getTime())) {
+      return 'Please select a valid pickup date and time.';
+    }
+
+    if (selectedDate <= now) {
+      return 'Pickup date and time must be in the future.';
+    }
+
+    return '';
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -99,8 +121,20 @@ export default function FleetBookingsSection() {
       totalPrice: Number(form.totalPrice)
     };
 
-    if (!payload.pickupLocation || !payload.dropoffLocation || !payload.pickupTime || Number.isNaN(payload.totalPrice) || payload.totalPrice <= 0) {
+    if (
+      !payload.pickupLocation ||
+      !payload.dropoffLocation ||
+      !payload.pickupTime ||
+      Number.isNaN(payload.totalPrice) ||
+      payload.totalPrice <= 0
+    ) {
       setMessage('Please fill pickup, dropoff, pickup time and price correctly.');
+      return;
+    }
+
+    const dateError = validateFutureDate(form.pickupTime);
+    if (dateError) {
+      setMessage(dateError);
       return;
     }
 
@@ -144,8 +178,20 @@ export default function FleetBookingsSection() {
       totalPrice: Number(editForm.totalPrice)
     };
 
-    if (!payload.pickupLocation || !payload.dropoffLocation || !payload.pickupTime || Number.isNaN(payload.totalPrice) || payload.totalPrice <= 0) {
+    if (
+      !payload.pickupLocation ||
+      !payload.dropoffLocation ||
+      !payload.pickupTime ||
+      Number.isNaN(payload.totalPrice) ||
+      payload.totalPrice <= 0
+    ) {
       setMessage('Please fill pickup, dropoff, pickup time and price correctly.');
+      return;
+    }
+
+    const dateError = validateFutureDate(editForm.pickupTime);
+    if (dateError) {
+      setMessage(dateError);
       return;
     }
 
@@ -199,6 +245,7 @@ export default function FleetBookingsSection() {
             className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
             required
           />
+
           <input
             value={form.dropoffLocation}
             onChange={(e) => setForm((prev) => ({ ...prev, dropoffLocation: e.target.value }))}
@@ -206,13 +253,16 @@ export default function FleetBookingsSection() {
             className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
             required
           />
+
           <input
             type="datetime-local"
             value={form.pickupTime}
             onChange={(e) => setForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+            min={getMinDateTime()}
             className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
             required
           />
+
           <input
             type="number"
             min="0"
@@ -236,6 +286,7 @@ export default function FleetBookingsSection() {
           >
             {saving ? 'Saving...' : 'Create Fleet Booking'}
           </button>
+
           {message && <p className="text-sm text-cyan-700 font-semibold">{message}</p>}
         </div>
       </form>
@@ -255,16 +306,26 @@ export default function FleetBookingsSection() {
               <th className="text-left px-4 py-3">Actions</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-cyan-50">
             {loading && (
-              <tr><td colSpan={9} className="px-4 py-4 text-cyan-700/80">Loading fleet bookings...</td></tr>
+              <tr>
+                <td colSpan={9} className="px-4 py-4 text-cyan-700/80">Loading fleet bookings...</td>
+              </tr>
             )}
+
             {!loading && error && (
-              <tr><td colSpan={9} className="px-4 py-4 text-rose-600">{error}</td></tr>
+              <tr>
+                <td colSpan={9} className="px-4 py-4 text-rose-600">{error}</td>
+              </tr>
             )}
+
             {!loading && !error && fleetBookings.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-4 text-cyan-700/80">No fleet bookings yet.</td></tr>
+              <tr>
+                <td colSpan={9} className="px-4 py-4 text-cyan-700/80">No fleet bookings yet.</td>
+              </tr>
             )}
+
             {!loading && fleetBookings.map((booking) => (
               <tr key={booking._id}>
                 <td className="px-4 py-3">{booking.pickupLocation}</td>
@@ -284,9 +345,11 @@ export default function FleetBookingsSection() {
                     <button onClick={() => onEdit(booking)} className="p-1.5 rounded border border-blue-200 text-blue-700 bg-blue-50">
                       <MdEdit />
                     </button>
+
                     <button onClick={() => onCancelBooking(booking._id)} className="p-1.5 rounded border border-amber-200 text-amber-700 bg-amber-50">
                       <MdCancel />
                     </button>
+
                     <button onClick={() => onDeleteBooking(booking._id)} className="p-1.5 rounded border border-rose-200 text-rose-700 bg-rose-50">
                       <MdDelete />
                     </button>
@@ -319,6 +382,7 @@ export default function FleetBookingsSection() {
                   className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
                   required
                 />
+
                 <input
                   value={editForm.dropoffLocation}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, dropoffLocation: e.target.value }))}
@@ -326,13 +390,16 @@ export default function FleetBookingsSection() {
                   className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
                   required
                 />
+
                 <input
                   type="datetime-local"
                   value={editForm.pickupTime}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+                  min={getMinDateTime()}
                   className="px-3 py-2.5 border border-cyan-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300"
                   required
                 />
+
                 <input
                   type="number"
                   min="0"
@@ -356,6 +423,7 @@ export default function FleetBookingsSection() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={saving}

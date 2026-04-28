@@ -109,11 +109,26 @@ const initialWizardState = {
   }
 };
 
+const getTodayDate = () => {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().slice(0, 10);
+};
+
+const addDays = (dateString, days) => {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+};
+
 const getNights = (checkInDate, checkOutDate) => {
   if (!checkInDate || !checkOutDate) return 1;
+
   const start = new Date(checkInDate);
   const end = new Date(checkOutDate);
   const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
   return diff > 0 ? diff : 1;
 };
 
@@ -121,11 +136,14 @@ const formatLKR = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
 
 export default function ToursSection() {
   const { createBooking } = useTouristBookings();
+
   const [selectedTour, setSelectedTour] = useState(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizard, setWizard] = useState(initialWizardState);
   const [bookingStatus, setBookingStatus] = useState({});
   const [message, setMessage] = useState('');
+
+  const todayDate = getTodayDate();
 
   const isTourOnly = selectedTour?.includesTag === 'Tour Only';
   const wizardSteps = isTourOnly ? TOUR_ONLY_WIZARD_STEPS : FULL_WIZARD_STEPS;
@@ -147,8 +165,10 @@ export default function ToursSection() {
     const nights = getNights(wizard.checkInDate, wizard.checkOutDate);
     const guests = Number(wizard.adults || 0) + Number(wizard.children || 0);
     const roomMeta = ROOM_OPTIONS[wizard.roomType] || ROOM_OPTIONS.Standard;
+
     const roomCost = isTourOnly ? 0 : roomMeta.rate * nights * Number(wizard.roomCount || 1);
     const mealCost = (MEAL_RATES[wizard.mealPlan] || 0) * nights * Math.max(1, guests);
+
     const extrasCost =
       (wizard.extras.airportPickup ? EXTRA_PRICES.airportPickup : 0) +
       (wizard.extras.privateGuide ? EXTRA_PRICES.privateGuide : 0) +
@@ -156,7 +176,9 @@ export default function ToursSection() {
 
     const tourBase = selectedTour.basePrice;
     const finalTotal = tourBase + roomCost + mealCost + extrasCost;
+
     const maxCapacity = roomMeta.capacity * Number(wizard.roomCount || 1);
+
     const capacityWarning = !isTourOnly && guests > maxCapacity
       ? `Guest count (${guests}) exceeds room capacity (${maxCapacity}).`
       : '';
@@ -174,12 +196,15 @@ export default function ToursSection() {
   }, [selectedTour, wizard, isTourOnly]);
 
   const openCustomize = (tour) => {
+    const checkIn = addDays(todayDate, 7);
+    const checkOut = addDays(checkIn, Math.max(1, tour.durationDays));
+
     setSelectedTour(tour);
     setWizardStep(0);
     setWizard({
       ...initialWizardState,
-      checkInDate: new Date(Date.now() + 86400000 * 7).toISOString().slice(0, 10),
-      checkOutDate: new Date(Date.now() + 86400000 * (7 + Math.max(1, tour.durationDays - 1))).toISOString().slice(0, 10)
+      checkInDate: checkIn,
+      checkOutDate: checkOut
     });
     setMessage('');
   };
@@ -190,8 +215,71 @@ export default function ToursSection() {
     setWizard(initialWizardState);
   };
 
+  const handleCheckInChange = (value) => {
+    const safeCheckIn = value < todayDate ? todayDate : value;
+    const minimumCheckOut = addDays(safeCheckIn, 1);
+
+    setWizard((prev) => ({
+      ...prev,
+      checkInDate: safeCheckIn,
+      checkOutDate: !prev.checkOutDate || prev.checkOutDate <= safeCheckIn
+        ? minimumCheckOut
+        : prev.checkOutDate
+    }));
+  };
+
+  const handleCheckOutChange = (value) => {
+    const minimumCheckOut = wizard.checkInDate ? addDays(wizard.checkInDate, 1) : addDays(todayDate, 1);
+    const safeCheckOut = value < minimumCheckOut ? minimumCheckOut : value;
+
+    setWizard((prev) => ({
+      ...prev,
+      checkOutDate: safeCheckOut
+    }));
+  };
+
+  const validateDates = () => {
+    if (!wizard.checkInDate) {
+      return 'Please select a check-in date.';
+    }
+
+    if (!wizard.checkOutDate) {
+      return 'Please select a check-out date.';
+    }
+
+    if (wizard.checkInDate < todayDate) {
+      return 'Check-in date must be today or later.';
+    }
+
+    if (wizard.checkOutDate <= wizard.checkInDate) {
+      return 'Check-out date must be after check-in date.';
+    }
+
+    return '';
+  };
+
+  const goNextStep = () => {
+    if (wizardStep === 0) {
+      const dateError = validateDates();
+      if (dateError) {
+        setMessage(dateError);
+        return;
+      }
+    }
+
+    setMessage('');
+    setWizardStep((prev) => Math.min(wizardSteps.length - 1, prev + 1));
+  };
+
   const handleConfirmBooking = async () => {
     if (!selectedTour) return;
+
+    const dateError = validateDates();
+    if (dateError) {
+      setMessage(dateError);
+      return;
+    }
+
     if (pricing.capacityWarning) {
       setMessage(pricing.capacityWarning);
       return;
@@ -202,7 +290,6 @@ export default function ToursSection() {
       setMessage('');
 
       await createBooking({
-        tourId: selectedTour.id,
         date: wizard.checkInDate,
         members: pricing.guests,
         pickupLocation: selectedTour.destination,
@@ -259,10 +346,16 @@ export default function ToursSection() {
           </div>
         </div>
 
-        <p className="text-sm font-semibold text-cyan-800/80">Choose a place, then customize rooms, meals, and extras.</p>
+        <p className="text-sm font-semibold text-cyan-800/80">
+          Choose a place, then customize rooms, meals, and extras.
+        </p>
       </div>
 
-      {message && <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800">{message}</div>}
+      {message && (
+        <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800">
+          {message}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {TOURS.map((tour) => (
@@ -302,7 +395,11 @@ export default function ToursSection() {
                 <h3 className="text-xl font-black text-zinc-900 leading-tight mb-2 group-hover:text-cyan-700 transition-colors">
                   {tour.title}
                 </h3>
-                <p className="text-stone-500 text-sm font-medium mb-2">Based on {tour.reviews} verified reviews</p>
+
+                <p className="text-stone-500 text-sm font-medium mb-2">
+                  Based on {tour.reviews} verified reviews
+                </p>
+
                 <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200">
                   {tour.includesTag}
                 </span>
@@ -310,8 +407,12 @@ export default function ToursSection() {
 
               <div className="flex items-end justify-between pt-6 border-t border-stone-100">
                 <div>
-                  <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Base Price From</p>
-                  <p className="text-2xl font-black text-zinc-900">{formatLKR(tour.basePrice)}</p>
+                  <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">
+                    Base Price From
+                  </p>
+                  <p className="text-2xl font-black text-zinc-900">
+                    {formatLKR(tour.basePrice)}
+                  </p>
                 </div>
 
                 <button
@@ -341,6 +442,7 @@ export default function ToursSection() {
                 <h4 className="text-xl font-bold text-cyan-950">Customize Package</h4>
                 <p className="text-sm text-cyan-700/80 mt-1">{selectedTour.title}</p>
               </div>
+
               <button onClick={closeCustomize} className="p-2 rounded-xl border border-cyan-200 text-cyan-700 hover:bg-cyan-50">
                 <MdClose className="text-lg" />
               </button>
@@ -363,19 +465,48 @@ export default function ToursSection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Check-in Date</label>
-                    <input type="date" value={wizard.checkInDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkInDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="date"
+                      value={wizard.checkInDate}
+                      onChange={(e) => handleCheckInChange(e.target.value)}
+                      min={todayDate}
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                      required
+                    />
                   </div>
+
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Check-out Date</label>
-                    <input type="date" value={wizard.checkOutDate} onChange={(e) => setWizard((prev) => ({ ...prev, checkOutDate: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="date"
+                      value={wizard.checkOutDate}
+                      onChange={(e) => handleCheckOutChange(e.target.value)}
+                      min={wizard.checkInDate ? addDays(wizard.checkInDate, 1) : addDays(todayDate, 1)}
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                      required
+                    />
                   </div>
+
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Adults</label>
-                    <input type="number" min="1" value={wizard.adults} onChange={(e) => setWizard((prev) => ({ ...prev, adults: Number(e.target.value || 1) }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="number"
+                      min="1"
+                      value={wizard.adults}
+                      onChange={(e) => setWizard((prev) => ({ ...prev, adults: Number(e.target.value || 1) }))}
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                    />
                   </div>
+
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Children</label>
-                    <input type="number" min="0" value={wizard.children} onChange={(e) => setWizard((prev) => ({ ...prev, children: Number(e.target.value || 0) }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="number"
+                      min="0"
+                      value={wizard.children}
+                      onChange={(e) => setWizard((prev) => ({ ...prev, children: Number(e.target.value || 0) }))}
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                    />
                   </div>
                 </div>
               )}
@@ -386,14 +517,24 @@ export default function ToursSection() {
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Room Type</label>
                     <select value={wizard.roomType} onChange={(e) => setWizard((prev) => ({ ...prev, roomType: e.target.value }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5">
                       {Object.keys(ROOM_OPTIONS).map((type) => (
-                        <option key={type} value={type}>{type} ({formatLKR(ROOM_OPTIONS[type].rate)} / night)</option>
+                        <option key={type} value={type}>
+                          {type} ({formatLKR(ROOM_OPTIONS[type].rate)} / night)
+                        </option>
                       ))}
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Number of Rooms</label>
-                    <input type="number" min="1" value={wizard.roomCount} onChange={(e) => setWizard((prev) => ({ ...prev, roomCount: Number(e.target.value || 1) }))} className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="number"
+                      min="1"
+                      value={wizard.roomCount}
+                      onChange={(e) => setWizard((prev) => ({ ...prev, roomCount: Number(e.target.value || 1) }))}
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                    />
                   </div>
+
                   {pricing.capacityWarning && (
                     <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
                       {pricing.capacityWarning}
@@ -412,9 +553,16 @@ export default function ToursSection() {
                       ))}
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-xs font-bold text-cyan-900 mb-1">Diet Preference (optional)</label>
-                    <input type="text" value={wizard.dietPreference} onChange={(e) => setWizard((prev) => ({ ...prev, dietPreference: e.target.value }))} placeholder="Veg / Vegan / Halal" className="w-full rounded-xl border border-cyan-200 px-3 py-2.5" />
+                    <input
+                      type="text"
+                      value={wizard.dietPreference}
+                      onChange={(e) => setWizard((prev) => ({ ...prev, dietPreference: e.target.value }))}
+                      placeholder="Veg / Vegan / Halal"
+                      className="w-full rounded-xl border border-cyan-200 px-3 py-2.5"
+                    />
                   </div>
                 </div>
               )}
@@ -425,10 +573,12 @@ export default function ToursSection() {
                     <input type="checkbox" checked={wizard.extras.airportPickup} onChange={(e) => setWizard((prev) => ({ ...prev, extras: { ...prev.extras, airportPickup: e.target.checked } }))} />
                     Airport Pickup ({formatLKR(EXTRA_PRICES.airportPickup)})
                   </label>
+
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                     <input type="checkbox" checked={wizard.extras.privateGuide} onChange={(e) => setWizard((prev) => ({ ...prev, extras: { ...prev.extras, privateGuide: e.target.checked } }))} />
                     Private Guide ({formatLKR(EXTRA_PRICES.privateGuide)})
                   </label>
+
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                     <input type="checkbox" checked={wizard.extras.safariPass} onChange={(e) => setWizard((prev) => ({ ...prev, extras: { ...prev.extras, safariPass: e.target.checked } }))} />
                     Activity Add-on: Safari Pass ({formatLKR(EXTRA_PRICES.safariPass)})
@@ -459,7 +609,7 @@ export default function ToursSection() {
 
               {wizardStep < wizardSteps.length - 1 ? (
                 <button
-                  onClick={() => setWizardStep((prev) => Math.min(wizardSteps.length - 1, prev + 1))}
+                  onClick={goNextStep}
                   className="px-4 py-2 rounded-xl bg-cyan-700 text-white hover:bg-cyan-800 font-semibold"
                 >
                   Next
