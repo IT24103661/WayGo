@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const VEHICLE_PLATE_REGEX = /^[A-Z]{2,3}-\d{4}$/;
 const VEHICLE_TYPES = ['Sedan', 'SUV', 'Van', 'Bus', 'Minivan', 'Luxury'];
@@ -45,12 +47,17 @@ function clearTransientFailures(identifier) {
 }
 
 /* ─ helper: build a signed JWT ─ */
-const signToken = (user) =>
-    jwt.sign(
+const signToken = (user) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is not configured.');
+    }
+
+    return jwt.sign(
         { userId: user._id, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: '1d' }
     );
+};
 
 /* ─ helper: strip password from user object ─ */
 const sanitize = (user) => {

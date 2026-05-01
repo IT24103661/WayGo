@@ -12,6 +12,8 @@ const ROLE_REDIRECTS = {
   Admin:       '/dashboard/admin',
 };
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 /* ── ripple helper ── */
 function RippleBtn({ onClick, children, className, disabled, type = 'button' }) {
   const handleClick = (e) => {
@@ -95,7 +97,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5001/api/users/login', {
+      const res = await fetch(`${API_BASE}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),

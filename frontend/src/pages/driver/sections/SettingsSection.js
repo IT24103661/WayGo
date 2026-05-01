@@ -63,7 +63,7 @@ export default function SettingsSection() {
     const fetchProfile = useCallback(async () => {
         try {
             const token = localStorage.getItem('waygo_token');
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001/api'}/users/profile`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/users/profile`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -87,7 +87,7 @@ export default function SettingsSection() {
     const fetchVehicleProfile = useCallback(async () => {
         try {
             const token = localStorage.getItem('waygo_token');
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001/api'}/driver/profile/vehicle`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/driver/profile/vehicle`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -168,7 +168,7 @@ export default function SettingsSection() {
         setLoading(true);
         try {
             const token = localStorage.getItem('waygo_token');
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001/api'}/users/profile`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/users/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -245,7 +245,7 @@ export default function SettingsSection() {
         setVehicleLoading(true);
         try {
             const token = localStorage.getItem('waygo_token');
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001/api'}/driver/profile/vehicle`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/driver/profile/vehicle`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

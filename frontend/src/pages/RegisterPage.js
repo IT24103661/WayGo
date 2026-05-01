@@ -10,6 +10,8 @@ const ROLES = [
   { value: 'FleetManager', label: 'Fleet Manager', emoji: '🚌', desc: 'Manage drivers & vehicles' },
 ];
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 /* ── password strength ── */
 function getStrength(pw) {
   if (!pw) return { score: 0, label: '', color: '' };
@@ -125,7 +127,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/users/register', {
+      const res = await fetch(`${API_BASE}/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

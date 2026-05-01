@@ -6,6 +6,11 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
+if (!process.env.JWT_SECRET) {
+  console.error('❌ Missing JWT_SECRET in backend/.env');
+  process.exit(1);
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
