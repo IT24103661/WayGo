@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 
@@ -55,8 +56,13 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/waygo';
+if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
+  console.warn('⚠️ MONGO_URI not set. Falling back to mongodb://127.0.0.1:27017/waygo');
+}
+
 // Connect to DB — only start the server after a successful connection
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('✅ MongoDB Connected!');
     console.log(`   Database: ${mongoose.connection.name}`);
