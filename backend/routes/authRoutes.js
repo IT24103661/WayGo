@@ -22,10 +22,10 @@ router.put('/password', protect, changePassword);
 router.delete('/profile', protect, deleteProfile);
 
 // Admin salary approval routes
-router.get('/admin/salaries/candidates', protect, authorizeRoles('SystemAdmin'), getSalaryCandidates);
-router.get('/admin/salaries', protect, authorizeRoles('SystemAdmin'), getSalaryApprovals);
-router.post('/admin/salaries', protect, authorizeRoles('SystemAdmin'), createSalaryApprovals);
-router.put('/admin/salaries/:salaryId', protect, authorizeRoles('SystemAdmin'), updateSalaryApproval);
-router.patch('/admin/salaries/:salaryId/status', protect, authorizeRoles('SystemAdmin'), updateSalaryApprovalStatus);
+router.get('/admin/salaries/candidates', protect, authorizeRoles('SystemAdmin', 'Admin'), getSalaryCandidates);
+router.get('/admin/salaries', protect, authorizeRoles('SystemAdmin', 'Admin'), getSalaryApprovals);
+router.post('/admin/salaries', protect, authorizeRoles('SystemAdmin', 'Admin'), createSalaryApprovals);
+router.put('/admin/salaries/:salaryId', protect, authorizeRoles('SystemAdmin', 'Admin'), updateSalaryApproval);
+router.patch('/admin/salaries/:salaryId/status', protect, authorizeRoles('SystemAdmin', 'Admin'), updateSalaryApprovalStatus);
 
 module.exports = router;

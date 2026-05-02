@@ -25,7 +25,7 @@ const {
 } = require('../controllers/adminModuleController');
 
 router.use(protect);
-router.use(authorizeRoles('SystemAdmin'));
+router.use(authorizeRoles('SystemAdmin', 'Admin'));
 
 router.get('/overview', getOverview);
 router.get('/analytics', getAnalytics);
